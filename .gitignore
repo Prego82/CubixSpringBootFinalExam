@@ -22,3 +22,14 @@
 # virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*
 replay_pid*
+/.metadata/
+target/
+/logistics-application/.gitattributes
+/logistics-application/.gitignore
+/logistics-application/.classpath
+/logistics-application/.factorypath
+/logistics-application/.project
+/logistics-application/.settings
+/logistics-application/.mvn/wrapper/maven-wrapper.properties
+/logistics-application/mvnw
+/logistics-application/mvnw.cmd
