@@ -1,14 +1,13 @@
 package hu.cubix.logistics.BalazsPeregi.dto;
 
-import hu.cubix.logistics.BalazsPeregi.model.Milestone;
 import jakarta.validation.constraints.PositiveOrZero;
 
 public class SectionDto {
 	@PositiveOrZero
 	private long id;
 
-	private Milestone startMilestone;
-	private Milestone endMilestone;
+	private MilestoneDto startMilestone;
+	private MilestoneDto endMilestone;
 	@PositiveOrZero
 	private int orderNr;
 
@@ -23,19 +22,19 @@ public class SectionDto {
 		this.id = id;
 	}
 
-	public Milestone getStartMilestone() {
+	public MilestoneDto getStartMilestone() {
 		return startMilestone;
 	}
 
-	public void setStartMilestone(Milestone startMilestone) {
+	public void setStartMilestone(MilestoneDto startMilestone) {
 		this.startMilestone = startMilestone;
 	}
 
-	public Milestone getEndMilestone() {
+	public MilestoneDto getEndMilestone() {
 		return endMilestone;
 	}
 
-	public void setEndMilestone(Milestone endMilestone) {
+	public void setEndMilestone(MilestoneDto endMilestone) {
 		this.endMilestone = endMilestone;
 	}
 

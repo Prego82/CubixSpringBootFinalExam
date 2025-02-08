@@ -1,36 +1,37 @@
 package hu.cubix.logistics.BalazsPeregi.dto;
 
 import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.PositiveOrZero;
 
 public class AddressDto {
-	@PositiveOrZero
-	private long id;
+	private Long id;
+	@NotNull
 	@Pattern(regexp = "^[A-Z]{2}$")
-	@NotEmpty
 	private String country;
+	@NotNull
 	@NotEmpty
 	private String city;
+	@NotNull
 	@NotEmpty
 	private String street;
+	@NotNull
 	@NotEmpty
 	private String zip;
+	@NotNull
 	@NotEmpty
 	private String houseNumber;
-	@NotEmpty
-	private String latitude;
-	@NotEmpty
-	private String longitude;
+	private Double latitude;
+	private Double longitude;
 
 	public AddressDto() {
 	}
 
-	public long getId() {
+	public Long getId() {
 		return id;
 	}
 
-	public void setId(long id) {
+	public void setId(Long id) {
 		this.id = id;
 	}
 
@@ -74,19 +75,19 @@ public class AddressDto {
 		this.houseNumber = houseNumber;
 	}
 
-	public String getLatitude() {
+	public Double getLatitude() {
 		return latitude;
 	}
 
-	public void setLatitude(String latitude) {
+	public void setLatitude(Double latitude) {
 		this.latitude = latitude;
 	}
 
-	public String getLongitude() {
+	public Double getLongitude() {
 		return longitude;
 	}
 
-	public void setLongitude(String longitude) {
+	public void setLongitude(Double longitude) {
 		this.longitude = longitude;
 	}
 

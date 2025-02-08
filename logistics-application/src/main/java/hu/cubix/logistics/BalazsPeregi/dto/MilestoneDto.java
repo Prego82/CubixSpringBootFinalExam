@@ -2,14 +2,13 @@ package hu.cubix.logistics.BalazsPeregi.dto;
 
 import java.time.LocalDateTime;
 
-import hu.cubix.logistics.BalazsPeregi.model.Address;
 import jakarta.validation.constraints.Future;
 import jakarta.validation.constraints.PositiveOrZero;
 
 public class MilestoneDto {
 	@PositiveOrZero
 	private long id;
-	private Address address;
+	private AddressDto address;
 	@Future
 	private LocalDateTime plannedTime;
 
@@ -24,11 +23,11 @@ public class MilestoneDto {
 		this.id = id;
 	}
 
-	public Address getAddress() {
+	public AddressDto getAddress() {
 		return address;
 	}
 
-	public void setAddress(Address address) {
+	public void setAddress(AddressDto address) {
 		this.address = address;
 	}
 

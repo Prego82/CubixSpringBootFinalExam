@@ -15,7 +15,9 @@ public class Section {
 
 	@ManyToOne
 	private TransportPlan transportPlan;
+	@ManyToOne
 	private Milestone startMilestone;
+	@ManyToOne
 	private Milestone endMilestone;
 
 	private int orderNr;

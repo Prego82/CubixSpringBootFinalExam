@@ -3,7 +3,6 @@ package hu.cubix.logistics.BalazsPeregi.dto;
 import java.util.ArrayList;
 import java.util.List;
 
-import hu.cubix.logistics.BalazsPeregi.model.Section;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.PositiveOrZero;
 
@@ -12,7 +11,7 @@ public class TransportPlanDto {
 	private long id;
 	@Positive
 	private int expectedIncome;
-	private List<Section> sections = new ArrayList<>();
+	private List<SectionDto> sections = new ArrayList<>();
 
 	public TransportPlanDto() {
 	}
@@ -33,11 +32,11 @@ public class TransportPlanDto {
 		this.expectedIncome = expectedIncome;
 	}
 
-	public List<Section> getSections() {
+	public List<SectionDto> getSections() {
 		return sections;
 	}
 
-	public void setSections(List<Section> sections) {
+	public void setSections(List<SectionDto> sections) {
 		this.sections = sections;
 	}
 

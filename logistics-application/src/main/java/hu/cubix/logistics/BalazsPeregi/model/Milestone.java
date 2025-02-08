@@ -6,12 +6,14 @@ import java.util.Objects;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
+import jakarta.persistence.ManyToOne;
 
 @Entity
 public class Milestone {
 	@Id
 	@GeneratedValue
 	private long id;
+	@ManyToOne
 	private Address address;
 	private LocalDateTime plannedTime;
 

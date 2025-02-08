@@ -16,14 +16,14 @@ public class Address {
 	private String street;
 	private String zip;
 	private String houseNumber;
-	private String latitude;
-	private String longitude;
+	private Double latitude;
+	private Double longitude;
 
 	public Address() {
 	}
 
-	public Address(String country, String city, String street, String zip, String houseNumber, String latitude,
-			String longitude) {
+	public Address(String country, String city, String street, String zip, String houseNumber, Double latitude,
+			Double longitude) {
 		this.country = country;
 		this.city = city;
 		this.street = street;
@@ -81,19 +81,19 @@ public class Address {
 		this.houseNumber = houseNumber;
 	}
 
-	public String getLatitude() {
+	public Double getLatitude() {
 		return latitude;
 	}
 
-	public void setLatitude(String latitude) {
+	public void setLatitude(Double latitude) {
 		this.latitude = latitude;
 	}
 
-	public String getLongitude() {
+	public Double getLongitude() {
 		return longitude;
 	}
 
-	public void setLongitude(String longitude) {
+	public void setLongitude(Double longitude) {
 		this.longitude = longitude;
 	}
 
