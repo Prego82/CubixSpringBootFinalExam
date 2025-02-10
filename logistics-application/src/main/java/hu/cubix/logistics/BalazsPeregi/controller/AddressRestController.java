@@ -4,6 +4,8 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -73,4 +75,15 @@ public class AddressRestController {
 			return ResponseEntity.ok(addressMapper.addressToDto(updated));
 		}
 	}
+
+	@PostMapping(path = "search", params = "page")
+	public ResponseEntity<List<AddressDto>> search(@RequestBody AddressDto searchedAddress, Pageable pageable) {
+		if (searchedAddress == null) {
+			return ResponseEntity.badRequest().build();
+		}
+		Page<Address> foundAddresses = addressService.dynamicSearch(addressMapper.dtoToAddress(searchedAddress),
+				pageable);
+		return ResponseEntity.ok(addressMapper.addressesToDtos(foundAddresses.getContent()));
+	}
+
 }
