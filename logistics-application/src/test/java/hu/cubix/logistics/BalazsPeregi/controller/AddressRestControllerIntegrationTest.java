@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
+import org.springframework.test.web.reactive.server.EntityExchangeResult;
 import org.springframework.test.web.reactive.server.WebTestClient;
 
 import hu.cubix.logistics.BalazsPeregi.dto.AddressDto;
@@ -543,4 +544,754 @@ class AddressRestControllerIntegrationTest {
 				.bodyValue(modifiedAddress).exchange().expectStatus().isBadRequest();
 	}
 
+	@Test
+	void testFilterPrefixNotExistentCity() {
+		// Arrange
+		AddressDto newAddress1 = new AddressDto();
+		newAddress1.setCountry("HU");
+		newAddress1.setZip("1111");
+		newAddress1.setCity("Budapest");
+		newAddress1.setStreet("Elso utca");
+		newAddress1.setHouseNumber("1");
+
+		AddressDto newAddress2 = new AddressDto();
+		newAddress2.setCountry("HU");
+		newAddress2.setZip("2222");
+		newAddress2.setCity("Budapest");
+		newAddress2.setStreet("Masodik utca");
+		newAddress2.setHouseNumber("2");
+
+		AddressDto newAddress3 = new AddressDto();
+		newAddress3.setCountry("HU");
+		newAddress3.setZip("3333");
+		newAddress3.setCity("Budapest");
+		newAddress3.setStreet("Harmadik utca");
+		newAddress3.setHouseNumber("3");
+
+		Long id1 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress1).exchange().expectStatus().isOk()
+				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
+		Long id2 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress2).exchange().expectStatus().isOk()
+				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
+		Long id3 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress3).exchange().expectStatus().isOk()
+				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
+
+		AddressDto filter = new AddressDto();
+		filter.setCity("Deb");
+		// Act
+		List<AddressDto> resultList = webTestClient.post()
+				.uri(uriBuilder -> uriBuilder.path(API_ADDRESSES).path("/search").queryParam("page", "0")
+						.queryParam("size", "3").queryParam("sort", "id,asc").build())
+				.bodyValue(filter).exchange().expectStatus().isOk().expectBodyList(AddressDto.class).returnResult()
+				.getResponseBody();
+		// Assert
+		assertThat(resultList).isEmpty();
+	}
+
+	@Test
+	void testFilterPrefixExistingCity() {
+		// Arrange
+		AddressDto newAddress1 = new AddressDto();
+		newAddress1.setCountry("HU");
+		newAddress1.setZip("1111");
+		newAddress1.setCity("Budapest");
+		newAddress1.setStreet("Elso utca");
+		newAddress1.setHouseNumber("1");
+
+		AddressDto newAddress2 = new AddressDto();
+		newAddress2.setCountry("HU");
+		newAddress2.setZip("2222");
+		newAddress2.setCity("Budapest");
+		newAddress2.setStreet("Masodik utca");
+		newAddress2.setHouseNumber("2");
+
+		AddressDto newAddress3 = new AddressDto();
+		newAddress3.setCountry("HU");
+		newAddress3.setZip("3333");
+		newAddress3.setCity("Budapest");
+		newAddress3.setStreet("Harmadik utca");
+		newAddress3.setHouseNumber("3");
+
+		Long id1 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress1).exchange().expectStatus().isOk()
+				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
+		Long id2 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress2).exchange().expectStatus().isOk()
+				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
+		Long id3 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress3).exchange().expectStatus().isOk()
+				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
+
+		AddressDto filter = new AddressDto();
+		filter.setCity("Bud");
+		// Act
+		EntityExchangeResult<List<AddressDto>> result = webTestClient.post()
+				.uri(uriBuilder -> uriBuilder.path(API_ADDRESSES).path("/search").queryParam("page", "0")
+						.queryParam("size", "3").queryParam("sort", "id,asc").build())
+				.bodyValue(filter).exchange().expectStatus().isOk().expectHeader().exists("X-Total-Count")
+				.expectBodyList(AddressDto.class).returnResult();
+		// Assert
+		String totalCountHeader = result.getResponseHeaders().getFirst("X-Total-Count");
+		assertThat(Integer.parseInt(totalCountHeader)).isEqualTo(3);
+		List<AddressDto> resultList = result.getResponseBody();
+		assertThat(resultList.size()).isEqualTo(3);
+		assertThat(resultList.get(0).getId()).isEqualTo(id1);
+		assertThat(resultList.get(0).getCountry()).isEqualTo(newAddress1.getCountry());
+		assertThat(resultList.get(0).getZip()).isEqualTo(newAddress1.getZip());
+		assertThat(resultList.get(0).getCity()).isEqualTo(newAddress1.getCity());
+		assertThat(resultList.get(0).getStreet()).isEqualTo(newAddress1.getStreet());
+		assertThat(resultList.get(0).getHouseNumber()).isEqualTo(newAddress1.getHouseNumber());
+		assertThat(resultList.get(1).getId()).isEqualTo(id2);
+		assertThat(resultList.get(1).getCountry()).isEqualTo(newAddress2.getCountry());
+		assertThat(resultList.get(1).getZip()).isEqualTo(newAddress2.getZip());
+		assertThat(resultList.get(1).getCity()).isEqualTo(newAddress2.getCity());
+		assertThat(resultList.get(1).getStreet()).isEqualTo(newAddress2.getStreet());
+		assertThat(resultList.get(1).getHouseNumber()).isEqualTo(newAddress2.getHouseNumber());
+		assertThat(resultList.get(2).getId()).isEqualTo(id3);
+		assertThat(resultList.get(2).getCountry()).isEqualTo(newAddress3.getCountry());
+		assertThat(resultList.get(2).getZip()).isEqualTo(newAddress3.getZip());
+		assertThat(resultList.get(2).getCity()).isEqualTo(newAddress3.getCity());
+		assertThat(resultList.get(2).getStreet()).isEqualTo(newAddress3.getStreet());
+		assertThat(resultList.get(2).getHouseNumber()).isEqualTo(newAddress3.getHouseNumber());
+	}
+
+	@Test
+	void testFilterPrefixExistingCityWithPagination1() {
+		// Arrange
+		AddressDto newAddress1 = new AddressDto();
+		newAddress1.setCountry("HU");
+		newAddress1.setZip("1111");
+		newAddress1.setCity("Budapest");
+		newAddress1.setStreet("Elso utca");
+		newAddress1.setHouseNumber("1");
+
+		AddressDto newAddress2 = new AddressDto();
+		newAddress2.setCountry("HU");
+		newAddress2.setZip("2222");
+		newAddress2.setCity("Budapest");
+		newAddress2.setStreet("Masodik utca");
+		newAddress2.setHouseNumber("2");
+
+		AddressDto newAddress3 = new AddressDto();
+		newAddress3.setCountry("HU");
+		newAddress3.setZip("3333");
+		newAddress3.setCity("Budapest");
+		newAddress3.setStreet("Harmadik utca");
+		newAddress3.setHouseNumber("3");
+
+		Long id1 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress1).exchange().expectStatus().isOk()
+				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
+		Long id2 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress2).exchange().expectStatus().isOk()
+				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
+		Long id3 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress3).exchange().expectStatus().isOk()
+				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
+
+		AddressDto filter = new AddressDto();
+		filter.setCity("Bud");
+		// Act
+		EntityExchangeResult<List<AddressDto>> result = webTestClient.post()
+				.uri(uriBuilder -> uriBuilder.path(API_ADDRESSES).path("/search").queryParam("page", "0")
+						.queryParam("size", "1").queryParam("sort", "id,asc").build())
+				.bodyValue(filter).exchange().expectStatus().isOk().expectHeader().exists("X-Total-Count")
+				.expectBodyList(AddressDto.class).returnResult();
+		// Assert
+		String totalCountHeader = result.getResponseHeaders().getFirst("X-Total-Count");
+		assertThat(Integer.parseInt(totalCountHeader)).isEqualTo(3);
+		List<AddressDto> resultList = result.getResponseBody();
+		assertThat(resultList.size()).isEqualTo(1);
+		assertThat(resultList.get(0).getId()).isEqualTo(id1);
+		assertThat(resultList.get(0).getCountry()).isEqualTo(newAddress1.getCountry());
+		assertThat(resultList.get(0).getZip()).isEqualTo(newAddress1.getZip());
+		assertThat(resultList.get(0).getCity()).isEqualTo(newAddress1.getCity());
+		assertThat(resultList.get(0).getStreet()).isEqualTo(newAddress1.getStreet());
+		assertThat(resultList.get(0).getHouseNumber()).isEqualTo(newAddress1.getHouseNumber());
+	}
+
+	@Test
+	void testFilterPrefixExistingCityWithPagination2() {
+		// Arrange
+		AddressDto newAddress1 = new AddressDto();
+		newAddress1.setCountry("HU");
+		newAddress1.setZip("1111");
+		newAddress1.setCity("Budapest");
+		newAddress1.setStreet("Elso utca");
+		newAddress1.setHouseNumber("1");
+
+		AddressDto newAddress2 = new AddressDto();
+		newAddress2.setCountry("HU");
+		newAddress2.setZip("2222");
+		newAddress2.setCity("Budapest");
+		newAddress2.setStreet("Masodik utca");
+		newAddress2.setHouseNumber("2");
+
+		AddressDto newAddress3 = new AddressDto();
+		newAddress3.setCountry("HU");
+		newAddress3.setZip("3333");
+		newAddress3.setCity("Budapest");
+		newAddress3.setStreet("Harmadik utca");
+		newAddress3.setHouseNumber("3");
+
+		Long id1 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress1).exchange().expectStatus().isOk()
+				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
+		Long id2 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress2).exchange().expectStatus().isOk()
+				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
+		Long id3 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress3).exchange().expectStatus().isOk()
+				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
+
+		AddressDto filter = new AddressDto();
+		filter.setCity("Bud");
+		// Act
+		EntityExchangeResult<List<AddressDto>> result = webTestClient.post()
+				.uri(uriBuilder -> uriBuilder.path(API_ADDRESSES).path("/search").queryParam("page", "1")
+						.queryParam("size", "1").queryParam("sort", "id,asc").build())
+				.bodyValue(filter).exchange().expectStatus().isOk().expectHeader().exists("X-Total-Count")
+				.expectBodyList(AddressDto.class).returnResult();
+		// Assert
+		String totalCountHeader = result.getResponseHeaders().getFirst("X-Total-Count");
+		assertThat(Integer.parseInt(totalCountHeader)).isEqualTo(3);
+		List<AddressDto> resultList = result.getResponseBody();
+		assertThat(resultList.size()).isEqualTo(1);
+		assertThat(resultList.get(0).getId()).isEqualTo(id2);
+		assertThat(resultList.get(0).getCountry()).isEqualTo(newAddress2.getCountry());
+		assertThat(resultList.get(0).getZip()).isEqualTo(newAddress2.getZip());
+		assertThat(resultList.get(0).getCity()).isEqualTo(newAddress2.getCity());
+		assertThat(resultList.get(0).getStreet()).isEqualTo(newAddress2.getStreet());
+		assertThat(resultList.get(0).getHouseNumber()).isEqualTo(newAddress2.getHouseNumber());
+	}
+
+	@Test
+	void testFilterPrefixExistingCityWithPagination3() {
+		// Arrange
+		AddressDto newAddress1 = new AddressDto();
+		newAddress1.setCountry("HU");
+		newAddress1.setZip("1111");
+		newAddress1.setCity("Budapest");
+		newAddress1.setStreet("Elso utca");
+		newAddress1.setHouseNumber("1");
+
+		AddressDto newAddress2 = new AddressDto();
+		newAddress2.setCountry("HU");
+		newAddress2.setZip("2222");
+		newAddress2.setCity("Budapest");
+		newAddress2.setStreet("Masodik utca");
+		newAddress2.setHouseNumber("2");
+
+		AddressDto newAddress3 = new AddressDto();
+		newAddress3.setCountry("HU");
+		newAddress3.setZip("3333");
+		newAddress3.setCity("Budapest");
+		newAddress3.setStreet("Harmadik utca");
+		newAddress3.setHouseNumber("3");
+
+		Long id1 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress1).exchange().expectStatus().isOk()
+				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
+		Long id2 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress2).exchange().expectStatus().isOk()
+				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
+		Long id3 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress3).exchange().expectStatus().isOk()
+				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
+
+		AddressDto filter = new AddressDto();
+		filter.setCity("Bud");
+		// Act
+		EntityExchangeResult<List<AddressDto>> result = webTestClient.post()
+				.uri(uriBuilder -> uriBuilder.path(API_ADDRESSES).path("/search").queryParam("page", "2")
+						.queryParam("size", "1").queryParam("sort", "id,asc").build())
+				.bodyValue(filter).exchange().expectStatus().isOk().expectHeader().exists("X-Total-Count")
+				.expectBodyList(AddressDto.class).returnResult();
+		// Assert
+		String totalCountHeader = result.getResponseHeaders().getFirst("X-Total-Count");
+		assertThat(Integer.parseInt(totalCountHeader)).isEqualTo(3);
+		List<AddressDto> resultList = result.getResponseBody();
+		assertThat(resultList.size()).isEqualTo(1);
+		assertThat(resultList.get(0).getId()).isEqualTo(id3);
+		assertThat(resultList.get(0).getCountry()).isEqualTo(newAddress3.getCountry());
+		assertThat(resultList.get(0).getZip()).isEqualTo(newAddress3.getZip());
+		assertThat(resultList.get(0).getCity()).isEqualTo(newAddress3.getCity());
+		assertThat(resultList.get(0).getStreet()).isEqualTo(newAddress3.getStreet());
+		assertThat(resultList.get(0).getHouseNumber()).isEqualTo(newAddress3.getHouseNumber());
+	}
+
+	@Test
+	void testFilterPrefixExistingCityPaginationSizeParameterMissing() {
+		// Arrange
+		AddressDto newAddress1 = new AddressDto();
+		newAddress1.setCountry("HU");
+		newAddress1.setZip("1111");
+		newAddress1.setCity("Budapest");
+		newAddress1.setStreet("Elso utca");
+		newAddress1.setHouseNumber("1");
+
+		AddressDto newAddress2 = new AddressDto();
+		newAddress2.setCountry("HU");
+		newAddress2.setZip("2222");
+		newAddress2.setCity("Budapest");
+		newAddress2.setStreet("Masodik utca");
+		newAddress2.setHouseNumber("2");
+
+		AddressDto newAddress3 = new AddressDto();
+		newAddress3.setCountry("HU");
+		newAddress3.setZip("3333");
+		newAddress3.setCity("Budapest");
+		newAddress3.setStreet("Harmadik utca");
+		newAddress3.setHouseNumber("3");
+
+		Long id1 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress1).exchange().expectStatus().isOk()
+				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
+		Long id2 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress2).exchange().expectStatus().isOk()
+				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
+		Long id3 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress3).exchange().expectStatus().isOk()
+				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
+
+		AddressDto filter = new AddressDto();
+		filter.setCity("Bud");
+		// Act
+		EntityExchangeResult<List<AddressDto>> result = webTestClient.post()
+				.uri(uriBuilder -> uriBuilder.path(API_ADDRESSES).path("/search").queryParam("page", "0")
+						.queryParam("sort", "id,asc").build())
+				.bodyValue(filter).exchange().expectStatus().isOk().expectHeader().exists("X-Total-Count")
+				.expectBodyList(AddressDto.class).returnResult();
+		// Assert
+		String totalCountHeader = result.getResponseHeaders().getFirst("X-Total-Count");
+		assertThat(Integer.parseInt(totalCountHeader)).isEqualTo(3);
+		List<AddressDto> resultList = result.getResponseBody();
+		assertThat(resultList.size()).isEqualTo(3);
+		assertThat(resultList.get(0).getId()).isEqualTo(id1);
+		assertThat(resultList.get(0).getCountry()).isEqualTo(newAddress1.getCountry());
+		assertThat(resultList.get(0).getZip()).isEqualTo(newAddress1.getZip());
+		assertThat(resultList.get(0).getCity()).isEqualTo(newAddress1.getCity());
+		assertThat(resultList.get(0).getStreet()).isEqualTo(newAddress1.getStreet());
+		assertThat(resultList.get(0).getHouseNumber()).isEqualTo(newAddress1.getHouseNumber());
+		assertThat(resultList.get(1).getId()).isEqualTo(id2);
+		assertThat(resultList.get(1).getCountry()).isEqualTo(newAddress2.getCountry());
+		assertThat(resultList.get(1).getZip()).isEqualTo(newAddress2.getZip());
+		assertThat(resultList.get(1).getCity()).isEqualTo(newAddress2.getCity());
+		assertThat(resultList.get(1).getStreet()).isEqualTo(newAddress2.getStreet());
+		assertThat(resultList.get(1).getHouseNumber()).isEqualTo(newAddress2.getHouseNumber());
+		assertThat(resultList.get(2).getId()).isEqualTo(id3);
+		assertThat(resultList.get(2).getCountry()).isEqualTo(newAddress3.getCountry());
+		assertThat(resultList.get(2).getZip()).isEqualTo(newAddress3.getZip());
+		assertThat(resultList.get(2).getCity()).isEqualTo(newAddress3.getCity());
+		assertThat(resultList.get(2).getStreet()).isEqualTo(newAddress3.getStreet());
+		assertThat(resultList.get(2).getHouseNumber()).isEqualTo(newAddress3.getHouseNumber());
+	}
+
+	@Test
+	void testFilterPrefixExistingCityPaginationPageParameterMissing() {
+		// Arrange
+		AddressDto newAddress1 = new AddressDto();
+		newAddress1.setCountry("HU");
+		newAddress1.setZip("1111");
+		newAddress1.setCity("Budapest");
+		newAddress1.setStreet("Elso utca");
+		newAddress1.setHouseNumber("1");
+
+		AddressDto newAddress2 = new AddressDto();
+		newAddress2.setCountry("HU");
+		newAddress2.setZip("2222");
+		newAddress2.setCity("Budapest");
+		newAddress2.setStreet("Masodik utca");
+		newAddress2.setHouseNumber("2");
+
+		AddressDto newAddress3 = new AddressDto();
+		newAddress3.setCountry("HU");
+		newAddress3.setZip("3333");
+		newAddress3.setCity("Budapest");
+		newAddress3.setStreet("Harmadik utca");
+		newAddress3.setHouseNumber("3");
+
+		Long id1 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress1).exchange().expectStatus().isOk()
+				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
+		Long id2 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress2).exchange().expectStatus().isOk()
+				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
+		Long id3 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress3).exchange().expectStatus().isOk()
+				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
+
+		AddressDto filter = new AddressDto();
+		filter.setCity("Bud");
+		// Act
+		EntityExchangeResult<List<AddressDto>> result = webTestClient.post()
+				.uri(uriBuilder -> uriBuilder.path(API_ADDRESSES).path("/search").queryParam("size", "3")
+						.queryParam("sort", "id,asc").build())
+				.bodyValue(filter).exchange().expectStatus().isOk().expectHeader().exists("X-Total-Count")
+				.expectBodyList(AddressDto.class).returnResult();
+		// Assert
+		String totalCountHeader = result.getResponseHeaders().getFirst("X-Total-Count");
+		assertThat(Integer.parseInt(totalCountHeader)).isEqualTo(3);
+		List<AddressDto> resultList = result.getResponseBody();
+		assertThat(resultList.size()).isEqualTo(3);
+		assertThat(resultList.get(0).getId()).isEqualTo(id1);
+		assertThat(resultList.get(0).getCountry()).isEqualTo(newAddress1.getCountry());
+		assertThat(resultList.get(0).getZip()).isEqualTo(newAddress1.getZip());
+		assertThat(resultList.get(0).getCity()).isEqualTo(newAddress1.getCity());
+		assertThat(resultList.get(0).getStreet()).isEqualTo(newAddress1.getStreet());
+		assertThat(resultList.get(0).getHouseNumber()).isEqualTo(newAddress1.getHouseNumber());
+		assertThat(resultList.get(1).getId()).isEqualTo(id2);
+		assertThat(resultList.get(1).getCountry()).isEqualTo(newAddress2.getCountry());
+		assertThat(resultList.get(1).getZip()).isEqualTo(newAddress2.getZip());
+		assertThat(resultList.get(1).getCity()).isEqualTo(newAddress2.getCity());
+		assertThat(resultList.get(1).getStreet()).isEqualTo(newAddress2.getStreet());
+		assertThat(resultList.get(1).getHouseNumber()).isEqualTo(newAddress2.getHouseNumber());
+		assertThat(resultList.get(2).getId()).isEqualTo(id3);
+		assertThat(resultList.get(2).getCountry()).isEqualTo(newAddress3.getCountry());
+		assertThat(resultList.get(2).getZip()).isEqualTo(newAddress3.getZip());
+		assertThat(resultList.get(2).getCity()).isEqualTo(newAddress3.getCity());
+		assertThat(resultList.get(2).getStreet()).isEqualTo(newAddress3.getStreet());
+		assertThat(resultList.get(2).getHouseNumber()).isEqualTo(newAddress3.getHouseNumber());
+	}
+
+	@Test
+	void testFilterPrefixExistingCityPaginationSortMissing() {
+		// Arrange
+		AddressDto newAddress1 = new AddressDto();
+		newAddress1.setCountry("HU");
+		newAddress1.setZip("1111");
+		newAddress1.setCity("Budapest");
+		newAddress1.setStreet("Elso utca");
+		newAddress1.setHouseNumber("1");
+
+		AddressDto newAddress2 = new AddressDto();
+		newAddress2.setCountry("HU");
+		newAddress2.setZip("2222");
+		newAddress2.setCity("Budapest");
+		newAddress2.setStreet("Masodik utca");
+		newAddress2.setHouseNumber("2");
+
+		AddressDto newAddress3 = new AddressDto();
+		newAddress3.setCountry("HU");
+		newAddress3.setZip("3333");
+		newAddress3.setCity("Budapest");
+		newAddress3.setStreet("Harmadik utca");
+		newAddress3.setHouseNumber("3");
+
+		Long id1 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress1).exchange().expectStatus().isOk()
+				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
+		Long id2 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress2).exchange().expectStatus().isOk()
+				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
+		Long id3 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress3).exchange().expectStatus().isOk()
+				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
+
+		AddressDto filter = new AddressDto();
+		filter.setCity("Bud");
+		// Act
+		EntityExchangeResult<List<AddressDto>> result = webTestClient.post()
+				.uri(uriBuilder -> uriBuilder.path(API_ADDRESSES).path("/search").queryParam("page", "0")
+						.queryParam("size", "3").build())
+				.bodyValue(filter).exchange().expectStatus().isOk().expectHeader().exists("X-Total-Count")
+				.expectBodyList(AddressDto.class).returnResult();
+		// Assert
+		String totalCountHeader = result.getResponseHeaders().getFirst("X-Total-Count");
+		assertThat(Integer.parseInt(totalCountHeader)).isEqualTo(3);
+		List<AddressDto> resultList = result.getResponseBody();
+		assertThat(resultList.get(0).getId()).isEqualTo(id1);
+		assertThat(resultList.get(0).getCountry()).isEqualTo(newAddress1.getCountry());
+		assertThat(resultList.get(0).getZip()).isEqualTo(newAddress1.getZip());
+		assertThat(resultList.get(0).getCity()).isEqualTo(newAddress1.getCity());
+		assertThat(resultList.get(0).getStreet()).isEqualTo(newAddress1.getStreet());
+		assertThat(resultList.get(0).getHouseNumber()).isEqualTo(newAddress1.getHouseNumber());
+		assertThat(resultList.get(1).getId()).isEqualTo(id2);
+		assertThat(resultList.get(1).getCountry()).isEqualTo(newAddress2.getCountry());
+		assertThat(resultList.get(1).getZip()).isEqualTo(newAddress2.getZip());
+		assertThat(resultList.get(1).getCity()).isEqualTo(newAddress2.getCity());
+		assertThat(resultList.get(1).getStreet()).isEqualTo(newAddress2.getStreet());
+		assertThat(resultList.get(1).getHouseNumber()).isEqualTo(newAddress2.getHouseNumber());
+		assertThat(resultList.get(2).getId()).isEqualTo(id3);
+		assertThat(resultList.get(2).getCountry()).isEqualTo(newAddress3.getCountry());
+		assertThat(resultList.get(2).getZip()).isEqualTo(newAddress3.getZip());
+		assertThat(resultList.get(2).getCity()).isEqualTo(newAddress3.getCity());
+		assertThat(resultList.get(2).getStreet()).isEqualTo(newAddress3.getStreet());
+		assertThat(resultList.get(2).getHouseNumber()).isEqualTo(newAddress3.getHouseNumber());
+	}
+
+	@Test
+	void testFilterPrefixNotExistentStreet() {
+		// Arrange
+		AddressDto newAddress1 = new AddressDto();
+		newAddress1.setCountry("HU");
+		newAddress1.setZip("1111");
+		newAddress1.setCity("Budapest");
+		newAddress1.setStreet("Elso utca");
+		newAddress1.setHouseNumber("1");
+
+		AddressDto newAddress2 = new AddressDto();
+		newAddress2.setCountry("HU");
+		newAddress2.setZip("2222");
+		newAddress2.setCity("Budapest");
+		newAddress2.setStreet("Masodik utca");
+		newAddress2.setHouseNumber("2");
+
+		AddressDto newAddress3 = new AddressDto();
+		newAddress3.setCountry("HU");
+		newAddress3.setZip("3333");
+		newAddress3.setCity("Budapest");
+		newAddress3.setStreet("Harmadik utca");
+		newAddress3.setHouseNumber("3");
+
+		Long id1 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress1).exchange().expectStatus().isOk()
+				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
+		Long id2 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress2).exchange().expectStatus().isOk()
+				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
+		Long id3 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress3).exchange().expectStatus().isOk()
+				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
+
+		AddressDto filter = new AddressDto();
+		filter.setStreet("Negyedik");
+		// Act
+		List<AddressDto> resultList = webTestClient.post()
+				.uri(uriBuilder -> uriBuilder.path(API_ADDRESSES).path("/search").queryParam("page", "0")
+						.queryParam("size", "3").queryParam("sort", "id,asc").build())
+				.bodyValue(filter).exchange().expectStatus().isOk().expectBodyList(AddressDto.class).returnResult()
+				.getResponseBody();
+		// Assert
+		assertThat(resultList).isEmpty();
+	}
+
+	@Test
+	void testFilterPrefixExistingStreet() {
+		// Arrange
+		AddressDto newAddress1 = new AddressDto();
+		newAddress1.setCountry("HU");
+		newAddress1.setZip("1111");
+		newAddress1.setCity("Budapest");
+		newAddress1.setStreet("Elso utca");
+		newAddress1.setHouseNumber("1");
+
+		AddressDto newAddress2 = new AddressDto();
+		newAddress2.setCountry("HU");
+		newAddress2.setZip("2222");
+		newAddress2.setCity("Budapest");
+		newAddress2.setStreet("Masodik utca");
+		newAddress2.setHouseNumber("2");
+
+		AddressDto newAddress3 = new AddressDto();
+		newAddress3.setCountry("HU");
+		newAddress3.setZip("3333");
+		newAddress3.setCity("Budapest");
+		newAddress3.setStreet("Harmadik utca");
+		newAddress3.setHouseNumber("3");
+
+		Long id1 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress1).exchange().expectStatus().isOk()
+				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
+		Long id2 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress2).exchange().expectStatus().isOk()
+				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
+		Long id3 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress3).exchange().expectStatus().isOk()
+				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
+
+		AddressDto filter = new AddressDto();
+		filter.setStreet("Mas");
+		// Act
+		EntityExchangeResult<List<AddressDto>> result = webTestClient.post()
+				.uri(uriBuilder -> uriBuilder.path(API_ADDRESSES).path("/search").queryParam("page", "0")
+						.queryParam("size", "3").queryParam("sort", "id,asc").build())
+				.bodyValue(filter).exchange().expectStatus().isOk().expectHeader().exists("X-Total-Count")
+				.expectBodyList(AddressDto.class).returnResult();
+		// Assert
+		String totalCountHeader = result.getResponseHeaders().getFirst("X-Total-Count");
+		assertThat(Integer.parseInt(totalCountHeader)).isEqualTo(1);
+		List<AddressDto> resultList = result.getResponseBody();
+		assertThat(resultList.size()).isEqualTo(1);
+		assertThat(resultList.get(0).getId()).isEqualTo(id2);
+		assertThat(resultList.get(0).getCountry()).isEqualTo(newAddress2.getCountry());
+		assertThat(resultList.get(0).getZip()).isEqualTo(newAddress2.getZip());
+		assertThat(resultList.get(0).getCity()).isEqualTo(newAddress2.getCity());
+		assertThat(resultList.get(0).getStreet()).isEqualTo(newAddress2.getStreet());
+		assertThat(resultList.get(0).getHouseNumber()).isEqualTo(newAddress2.getHouseNumber());
+	}
+
+	@Test
+	void testFilterCountryCodeNotExactMatch() {
+		// Arrange
+		AddressDto newAddress1 = new AddressDto();
+		newAddress1.setCountry("HU");
+		newAddress1.setZip("1111");
+		newAddress1.setCity("Budapest");
+		newAddress1.setStreet("Elso utca");
+		newAddress1.setHouseNumber("1");
+
+		AddressDto newAddress2 = new AddressDto();
+		newAddress2.setCountry("HU");
+		newAddress2.setZip("2222");
+		newAddress2.setCity("Budapest");
+		newAddress2.setStreet("Masodik utca");
+		newAddress2.setHouseNumber("2");
+
+		AddressDto newAddress3 = new AddressDto();
+		newAddress3.setCountry("HU");
+		newAddress3.setZip("3333");
+		newAddress3.setCity("Budapest");
+		newAddress3.setStreet("Harmadik utca");
+		newAddress3.setHouseNumber("3");
+
+		Long id1 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress1).exchange().expectStatus().isOk()
+				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
+		Long id2 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress2).exchange().expectStatus().isOk()
+				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
+		Long id3 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress3).exchange().expectStatus().isOk()
+				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
+
+		AddressDto filter = new AddressDto();
+		filter.setCountry("H");
+		// Act
+		List<AddressDto> resultList = webTestClient.post()
+				.uri(uriBuilder -> uriBuilder.path(API_ADDRESSES).path("/search").queryParam("page", "0")
+						.queryParam("size", "3").queryParam("sort", "id,asc").build())
+				.bodyValue(filter).exchange().expectStatus().isOk().expectBodyList(AddressDto.class).returnResult()
+				.getResponseBody();
+		// Assert
+		assertThat(resultList).isEmpty();
+	}
+
+	@Test
+	void testFilterCountryCodeExactMatch() {
+		// Arrange
+		AddressDto newAddress1 = new AddressDto();
+		newAddress1.setCountry("HU");
+		newAddress1.setZip("1111");
+		newAddress1.setCity("Budapest");
+		newAddress1.setStreet("Elso utca");
+		newAddress1.setHouseNumber("1");
+
+		AddressDto newAddress2 = new AddressDto();
+		newAddress2.setCountry("HU");
+		newAddress2.setZip("2222");
+		newAddress2.setCity("Budapest");
+		newAddress2.setStreet("Masodik utca");
+		newAddress2.setHouseNumber("2");
+
+		AddressDto newAddress3 = new AddressDto();
+		newAddress3.setCountry("HU");
+		newAddress3.setZip("3333");
+		newAddress3.setCity("Budapest");
+		newAddress3.setStreet("Harmadik utca");
+		newAddress3.setHouseNumber("3");
+
+		Long id1 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress1).exchange().expectStatus().isOk()
+				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
+		Long id2 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress2).exchange().expectStatus().isOk()
+				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
+		Long id3 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress3).exchange().expectStatus().isOk()
+				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
+
+		AddressDto filter = new AddressDto();
+		filter.setCountry("HU");
+		// Act
+		EntityExchangeResult<List<AddressDto>> result = webTestClient.post()
+				.uri(uriBuilder -> uriBuilder.path(API_ADDRESSES).path("/search").queryParam("page", "0")
+						.queryParam("size", "3").queryParam("sort", "id,asc").build())
+				.bodyValue(filter).exchange().expectStatus().isOk().expectHeader().exists("X-Total-Count")
+				.expectBodyList(AddressDto.class).returnResult();
+		// Assert
+		String totalCountHeader = result.getResponseHeaders().getFirst("X-Total-Count");
+		assertThat(Integer.parseInt(totalCountHeader)).isEqualTo(3);
+		List<AddressDto> resultList = result.getResponseBody();
+		assertThat(resultList.size()).isEqualTo(3);
+		assertThat(resultList.get(0).getId()).isEqualTo(id1);
+		assertThat(resultList.get(0).getCountry()).isEqualTo(newAddress1.getCountry());
+		assertThat(resultList.get(0).getZip()).isEqualTo(newAddress1.getZip());
+		assertThat(resultList.get(0).getCity()).isEqualTo(newAddress1.getCity());
+		assertThat(resultList.get(0).getStreet()).isEqualTo(newAddress1.getStreet());
+		assertThat(resultList.get(0).getHouseNumber()).isEqualTo(newAddress1.getHouseNumber());
+		assertThat(resultList.get(1).getId()).isEqualTo(id2);
+		assertThat(resultList.get(1).getCountry()).isEqualTo(newAddress2.getCountry());
+		assertThat(resultList.get(1).getZip()).isEqualTo(newAddress2.getZip());
+		assertThat(resultList.get(1).getCity()).isEqualTo(newAddress2.getCity());
+		assertThat(resultList.get(1).getStreet()).isEqualTo(newAddress2.getStreet());
+		assertThat(resultList.get(1).getHouseNumber()).isEqualTo(newAddress2.getHouseNumber());
+		assertThat(resultList.get(2).getId()).isEqualTo(id3);
+		assertThat(resultList.get(2).getCountry()).isEqualTo(newAddress3.getCountry());
+		assertThat(resultList.get(2).getZip()).isEqualTo(newAddress3.getZip());
+		assertThat(resultList.get(2).getCity()).isEqualTo(newAddress3.getCity());
+		assertThat(resultList.get(2).getStreet()).isEqualTo(newAddress3.getStreet());
+		assertThat(resultList.get(2).getHouseNumber()).isEqualTo(newAddress3.getHouseNumber());
+	}
+
+	@Test
+	void testFilterZipNotExactMatch() {
+		// Arrange
+		AddressDto newAddress1 = new AddressDto();
+		newAddress1.setCountry("HU");
+		newAddress1.setZip("1111");
+		newAddress1.setCity("Budapest");
+		newAddress1.setStreet("Elso utca");
+		newAddress1.setHouseNumber("1");
+
+		AddressDto newAddress2 = new AddressDto();
+		newAddress2.setCountry("HU");
+		newAddress2.setZip("2222");
+		newAddress2.setCity("Budapest");
+		newAddress2.setStreet("Masodik utca");
+		newAddress2.setHouseNumber("2");
+
+		AddressDto newAddress3 = new AddressDto();
+		newAddress3.setCountry("HU");
+		newAddress3.setZip("3333");
+		newAddress3.setCity("Budapest");
+		newAddress3.setStreet("Harmadik utca");
+		newAddress3.setHouseNumber("3");
+
+		Long id1 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress1).exchange().expectStatus().isOk()
+				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
+		Long id2 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress2).exchange().expectStatus().isOk()
+				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
+		Long id3 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress3).exchange().expectStatus().isOk()
+				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
+
+		AddressDto filter = new AddressDto();
+		filter.setZip("11");
+		// Act
+		List<AddressDto> resultList = webTestClient.post()
+				.uri(uriBuilder -> uriBuilder.path(API_ADDRESSES).path("/search").queryParam("page", "0")
+						.queryParam("size", "3").queryParam("sort", "id,asc").build())
+				.bodyValue(filter).exchange().expectStatus().isOk().expectBodyList(AddressDto.class).returnResult()
+				.getResponseBody();
+		// Assert
+		assertThat(resultList).isEmpty();
+	}
+
+	@Test
+	void testFilterZipCodeExactMatch() {
+		// Arrange
+		AddressDto newAddress1 = new AddressDto();
+		newAddress1.setCountry("HU");
+		newAddress1.setZip("1111");
+		newAddress1.setCity("Budapest");
+		newAddress1.setStreet("Elso utca");
+		newAddress1.setHouseNumber("1");
+
+		AddressDto newAddress2 = new AddressDto();
+		newAddress2.setCountry("HU");
+		newAddress2.setZip("2222");
+		newAddress2.setCity("Budapest");
+		newAddress2.setStreet("Masodik utca");
+		newAddress2.setHouseNumber("2");
+
+		AddressDto newAddress3 = new AddressDto();
+		newAddress3.setCountry("HU");
+		newAddress3.setZip("3333");
+		newAddress3.setCity("Budapest");
+		newAddress3.setStreet("Harmadik utca");
+		newAddress3.setHouseNumber("3");
+
+		Long id1 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress1).exchange().expectStatus().isOk()
+				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
+		Long id2 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress2).exchange().expectStatus().isOk()
+				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
+		Long id3 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress3).exchange().expectStatus().isOk()
+				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
+
+		AddressDto filter = new AddressDto();
+		filter.setZip("1111");
+		// Act
+		EntityExchangeResult<List<AddressDto>> result = webTestClient.post()
+				.uri(uriBuilder -> uriBuilder.path(API_ADDRESSES).path("/search").queryParam("page", "0")
+						.queryParam("size", "3").queryParam("sort", "id,asc").build())
+				.bodyValue(filter).exchange().expectStatus().isOk().expectHeader().exists("X-Total-Count")
+				.expectBodyList(AddressDto.class).returnResult();
+		// Assert
+		String totalCountHeader = result.getResponseHeaders().getFirst("X-Total-Count");
+		assertThat(Integer.parseInt(totalCountHeader)).isEqualTo(1);
+		List<AddressDto> resultList = result.getResponseBody();
+		assertThat(resultList.size()).isEqualTo(1);
+		assertThat(resultList.get(0).getId()).isEqualTo(id1);
+		assertThat(resultList.get(0).getCountry()).isEqualTo(newAddress1.getCountry());
+		assertThat(resultList.get(0).getZip()).isEqualTo(newAddress1.getZip());
+		assertThat(resultList.get(0).getCity()).isEqualTo(newAddress1.getCity());
+		assertThat(resultList.get(0).getStreet()).isEqualTo(newAddress1.getStreet());
+		assertThat(resultList.get(0).getHouseNumber()).isEqualTo(newAddress1.getHouseNumber());
+	}
 }

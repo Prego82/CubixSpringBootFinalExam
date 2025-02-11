@@ -52,18 +52,18 @@ public class AddressRestController {
 		return addressMapper.addressesToDtos(addressService.findAll());
 	}
 
-	@GetMapping("{id}")
+	@GetMapping("/{id}")
 	public AddressDto findById(@PathVariable long id) {
 		Optional<Address> address = addressService.findById(id);
 		return addressMapper.addressToDto(address.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND)));
 	}
 
-	@DeleteMapping("{id}")
+	@DeleteMapping("/{id}")
 	public void deleteById(@PathVariable long id) {
 		addressService.deleteById(id);
 	}
 
-	@PutMapping("{id}")
+	@PutMapping("/{id}")
 	public ResponseEntity<AddressDto> update(@PathVariable long id, @RequestBody @Valid AddressDto updatedAddress) {
 		if (updatedAddress.getId() != id) {
 			return ResponseEntity.badRequest().build();
@@ -76,14 +76,15 @@ public class AddressRestController {
 		}
 	}
 
-	@PostMapping(path = "search", params = "page")
+	@PostMapping(path = "/search")
 	public ResponseEntity<List<AddressDto>> search(@RequestBody AddressDto searchedAddress, Pageable pageable) {
 		if (searchedAddress == null) {
 			return ResponseEntity.badRequest().build();
 		}
 		Page<Address> foundAddresses = addressService.dynamicSearch(addressMapper.dtoToAddress(searchedAddress),
 				pageable);
-		return ResponseEntity.ok(addressMapper.addressesToDtos(foundAddresses.getContent()));
+		return ResponseEntity.ok().header("X-Total-Count", String.valueOf(foundAddresses.getTotalElements()))
+				.body(addressMapper.addressesToDtos(foundAddresses.getContent()));
 	}
 
 }
