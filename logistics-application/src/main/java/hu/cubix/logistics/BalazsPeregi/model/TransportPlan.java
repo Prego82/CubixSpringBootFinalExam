@@ -13,7 +13,7 @@ public class TransportPlan {
 	@Id
 	@GeneratedValue
 	private long id;
-	private int expectedIncome;
+	private double expectedIncome;
 
 	@OneToMany
 	private List<Section> sections;
@@ -21,7 +21,7 @@ public class TransportPlan {
 	public TransportPlan() {
 	}
 
-	public TransportPlan(int expectedIncome, List<Section> sections) {
+	public TransportPlan(double expectedIncome, List<Section> sections) {
 		this.expectedIncome = expectedIncome;
 		this.sections = sections;
 	}
@@ -34,11 +34,11 @@ public class TransportPlan {
 		this.id = id;
 	}
 
-	public int getExpectedIncome() {
+	public double getExpectedIncome() {
 		return expectedIncome;
 	}
 
-	public void setExpectedIncome(int expectedIncome) {
+	public void setExpectedIncome(double expectedIncome) {
 		this.expectedIncome = expectedIncome;
 	}
 

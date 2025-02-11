@@ -25,8 +25,7 @@ public class Section {
 	public Section() {
 	}
 
-	public Section(TransportPlan transportPlan, Milestone startMilestone, Milestone endMilestone, int orderNr) {
-		this.transportPlan = transportPlan;
+	public Section(Milestone startMilestone, Milestone endMilestone, int orderNr) {
 		this.startMilestone = startMilestone;
 		this.endMilestone = endMilestone;
 		this.orderNr = orderNr;
