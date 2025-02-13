@@ -10,17 +10,21 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
+import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 import org.springframework.test.web.reactive.server.EntityExchangeResult;
 import org.springframework.test.web.reactive.server.WebTestClient;
 
 import hu.cubix.logistics.BalazsPeregi.dto.AddressDto;
+import hu.cubix.logistics.BalazsPeregi.dto.LoginDto;
 import hu.cubix.logistics.BalazsPeregi.repository.AddressRepository;
+import hu.cubix.logistics.BalazsPeregi.security.SecurityConfig;
 import hu.cubix.logistics.BalazsPeregi.service.AddressService;
 
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
 @AutoConfigureTestDatabase
+@AutoConfigureWebTestClient(timeout = "10000m")
 class AddressRestControllerIntegrationTest {
 
 	private static final String API_ADDRESSES = "/api/addresses";
@@ -33,16 +37,38 @@ class AddressRestControllerIntegrationTest {
 	@Autowired
 	AddressService addressService;
 
+	private String jwt;
+
 	@BeforeEach
 	void init() {
 		addressRepo.deleteAll();
+		LoginDto loginDto = new LoginDto();
+		loginDto.setUsername(SecurityConfig.ADDRESS_MANAGER_NAME);
+		loginDto.setPassword(SecurityConfig.PASS);
+		jwt = webTestClient.post().uri("/api/login").bodyValue(loginDto).exchange().expectBody(String.class)
+				.returnResult().getResponseBody();
+	}
+
+	@Test
+	void testValidation() {
+		// Arrange
+		LoginDto loginDto = new LoginDto();
+		loginDto.setUsername(SecurityConfig.TRANSPORT_MANAGER_NAME);
+		loginDto.setPassword(SecurityConfig.PASS);
+		String jwt = webTestClient.post().uri("/api/login").bodyValue(loginDto).exchange().expectBody(String.class)
+				.returnResult().getResponseBody();
+		// Act
+		webTestClient.get().uri(API_ADDRESSES).headers(headers -> headers.setBearerAuth(jwt)).exchange().expectStatus()
+				.isForbidden();
+		// Assert
 	}
 
 	@Test
 	void testAddAddressWithEmptyBody() {
 		// Arrange
 		// Act
-		webTestClient.post().uri(API_ADDRESSES).exchange().expectStatus().isBadRequest();
+		webTestClient.post().uri(API_ADDRESSES).headers(headers -> headers.setBearerAuth(jwt)).exchange().expectStatus()
+				.isBadRequest();
 		// Assert
 	}
 
@@ -57,7 +83,8 @@ class AddressRestControllerIntegrationTest {
 		newAddress.setStreet("Elso utca");
 		newAddress.setHouseNumber("1");
 		// Act
-		webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress).exchange().expectStatus().isBadRequest();
+		webTestClient.post().uri(API_ADDRESSES).headers(headers -> headers.setBearerAuth(jwt)).bodyValue(newAddress)
+				.exchange().expectStatus().isBadRequest();
 		// Assert
 	}
 
@@ -70,7 +97,8 @@ class AddressRestControllerIntegrationTest {
 		newAddress.setStreet("Elso utca");
 		newAddress.setHouseNumber("1");
 		// Act
-		webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress).exchange().expectStatus().isBadRequest();
+		webTestClient.post().uri(API_ADDRESSES).headers(headers -> headers.setBearerAuth(jwt)).bodyValue(newAddress)
+				.exchange().expectStatus().isBadRequest();
 		// Assert
 	}
 
@@ -83,7 +111,8 @@ class AddressRestControllerIntegrationTest {
 		newAddress.setStreet("Elso utca");
 		newAddress.setHouseNumber("1");
 		// Act
-		webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress).exchange().expectStatus().isBadRequest();
+		webTestClient.post().uri(API_ADDRESSES).headers(headers -> headers.setBearerAuth(jwt)).bodyValue(newAddress)
+				.exchange().expectStatus().isBadRequest();
 		// Assert
 	}
 
@@ -96,7 +125,8 @@ class AddressRestControllerIntegrationTest {
 		newAddress.setStreet("Elso utca");
 		newAddress.setHouseNumber("1");
 		// Act
-		webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress).exchange().expectStatus().isBadRequest();
+		webTestClient.post().uri(API_ADDRESSES).headers(headers -> headers.setBearerAuth(jwt)).bodyValue(newAddress)
+				.exchange().expectStatus().isBadRequest();
 		// Assert
 	}
 
@@ -109,7 +139,8 @@ class AddressRestControllerIntegrationTest {
 		newAddress.setCity("Budapest");
 		newAddress.setHouseNumber("1");
 		// Act
-		webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress).exchange().expectStatus().isBadRequest();
+		webTestClient.post().uri(API_ADDRESSES).headers(headers -> headers.setBearerAuth(jwt)).bodyValue(newAddress)
+				.exchange().expectStatus().isBadRequest();
 		// Assert
 	}
 
@@ -122,7 +153,8 @@ class AddressRestControllerIntegrationTest {
 		newAddress.setCity("Budapest");
 		newAddress.setStreet("Elso utca");
 		// Act
-		webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress).exchange().expectStatus().isBadRequest();
+		webTestClient.post().uri(API_ADDRESSES).headers(headers -> headers.setBearerAuth(jwt)).bodyValue(newAddress)
+				.exchange().expectStatus().isBadRequest();
 		// Assert
 	}
 
@@ -136,8 +168,9 @@ class AddressRestControllerIntegrationTest {
 		newAddress.setStreet("Elso utca");
 		newAddress.setHouseNumber("1");
 		// Act
-		AddressDto responseBody = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress).exchange()
-				.expectStatus().isOk().expectBody(AddressDto.class).returnResult().getResponseBody();
+		AddressDto responseBody = webTestClient.post().uri(API_ADDRESSES).headers(headers -> headers.setBearerAuth(jwt))
+				.bodyValue(newAddress).exchange().expectStatus().isOk().expectBody(AddressDto.class).returnResult()
+				.getResponseBody();
 		// Assert
 		assertThat(responseBody.getId()).isNotNull();
 		assertThat(responseBody.getCountry()).isEqualTo(newAddress.getCountry());
@@ -171,11 +204,15 @@ class AddressRestControllerIntegrationTest {
 		newAddress3.setStreet("Harmadik utca");
 		newAddress3.setHouseNumber("3");
 
-		webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress1).exchange();
-		webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress2).exchange();
-		webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress3).exchange();
+		webTestClient.post().uri(API_ADDRESSES).headers(headers -> headers.setBearerAuth(jwt)).bodyValue(newAddress1)
+				.exchange();
+		webTestClient.post().uri(API_ADDRESSES).headers(headers -> headers.setBearerAuth(jwt)).bodyValue(newAddress2)
+				.exchange();
+		webTestClient.post().uri(API_ADDRESSES).headers(headers -> headers.setBearerAuth(jwt)).bodyValue(newAddress3)
+				.exchange();
 		// Act
-		List<AddressDto> allAddresses = webTestClient.get().uri(API_ADDRESSES).exchange().expectStatus().isOk()
+		List<AddressDto> allAddresses = webTestClient.get().uri(API_ADDRESSES)
+				.headers(headers -> headers.setBearerAuth(jwt)).exchange().expectStatus().isOk()
 				.expectBodyList(AddressDto.class).returnResult().getResponseBody();
 		// Assert
 		Collections.sort(allAddresses, Comparator.comparing(AddressDto::getHouseNumber));
@@ -204,8 +241,8 @@ class AddressRestControllerIntegrationTest {
 	void testFindNonExistingAddress() {
 		// Arrange
 		// Act
-		webTestClient.get().uri(uriBuilder -> uriBuilder.path(API_ADDRESSES).path("{id}").build("100")).exchange()
-				.expectStatus().isNotFound();
+		webTestClient.get().uri(uriBuilder -> uriBuilder.path(API_ADDRESSES).path("{id}").build("100"))
+				.headers(headers -> headers.setBearerAuth(jwt)).exchange().expectStatus().isNotFound();
 		// Assert
 
 	}
@@ -234,16 +271,20 @@ class AddressRestControllerIntegrationTest {
 		newAddress3.setStreet("Harmadik utca");
 		newAddress3.setHouseNumber("3");
 
-		Long id1 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress1).exchange().expectStatus().isOk()
-				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
-		Long id2 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress2).exchange().expectStatus().isOk()
-				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
-		Long id3 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress3).exchange().expectStatus().isOk()
-				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
+		Long id1 = webTestClient.post().uri(API_ADDRESSES).headers(headers -> headers.setBearerAuth(jwt))
+				.bodyValue(newAddress1).exchange().expectStatus().isOk().expectBody(AddressDto.class).returnResult()
+				.getResponseBody().getId();
+		Long id2 = webTestClient.post().uri(API_ADDRESSES).headers(headers -> headers.setBearerAuth(jwt))
+				.bodyValue(newAddress2).exchange().expectStatus().isOk().expectBody(AddressDto.class).returnResult()
+				.getResponseBody().getId();
+		Long id3 = webTestClient.post().uri(API_ADDRESSES).headers(headers -> headers.setBearerAuth(jwt))
+				.bodyValue(newAddress3).exchange().expectStatus().isOk().expectBody(AddressDto.class).returnResult()
+				.getResponseBody().getId();
 		// Act
 		AddressDto responseBody = webTestClient.get()
-				.uri(uriBuilder -> uriBuilder.path(API_ADDRESSES).path("/{id}").build(id1)).exchange().expectStatus()
-				.isOk().expectBody(AddressDto.class).returnResult().getResponseBody();
+				.uri(uriBuilder -> uriBuilder.path(API_ADDRESSES).path("/{id}").build(id1))
+				.headers(headers -> headers.setBearerAuth(jwt)).exchange().expectStatus().isOk()
+				.expectBody(AddressDto.class).returnResult().getResponseBody();
 		// Assert
 		assertThat(responseBody.getCountry()).isEqualTo(newAddress1.getCountry());
 		assertThat(responseBody.getZip()).isEqualTo(newAddress1.getZip());
@@ -256,8 +297,8 @@ class AddressRestControllerIntegrationTest {
 	void testDeleteNonExistingAddress() {
 		// Arrange
 		// Act
-		webTestClient.delete().uri(uriBuilder -> uriBuilder.path(API_ADDRESSES).path("/{id}").build("100")).exchange()
-				.expectStatus().isOk();
+		webTestClient.delete().uri(uriBuilder -> uriBuilder.path(API_ADDRESSES).path("/{id}").build("100"))
+				.headers(headers -> headers.setBearerAuth(jwt)).exchange().expectStatus().isOk();
 		// Assert
 
 	}
@@ -286,16 +327,20 @@ class AddressRestControllerIntegrationTest {
 		newAddress3.setStreet("Harmadik utca");
 		newAddress3.setHouseNumber("3");
 
-		Long id1 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress1).exchange().expectStatus().isOk()
-				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
-		Long id2 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress2).exchange().expectStatus().isOk()
-				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
-		Long id3 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress3).exchange().expectStatus().isOk()
-				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
+		Long id1 = webTestClient.post().uri(API_ADDRESSES).headers(headers -> headers.setBearerAuth(jwt))
+				.bodyValue(newAddress1).exchange().expectStatus().isOk().expectBody(AddressDto.class).returnResult()
+				.getResponseBody().getId();
+		Long id2 = webTestClient.post().uri(API_ADDRESSES).headers(headers -> headers.setBearerAuth(jwt))
+				.bodyValue(newAddress2).exchange().expectStatus().isOk().expectBody(AddressDto.class).returnResult()
+				.getResponseBody().getId();
+		Long id3 = webTestClient.post().uri(API_ADDRESSES).headers(headers -> headers.setBearerAuth(jwt))
+				.bodyValue(newAddress3).exchange().expectStatus().isOk().expectBody(AddressDto.class).returnResult()
+				.getResponseBody().getId();
 		// Act
-		webTestClient.delete().uri(uriBuilder -> uriBuilder.path(API_ADDRESSES).path("/{id}").build(id1)).exchange()
-				.expectStatus().isOk();
-		List<AddressDto> allAddresses = webTestClient.get().uri(API_ADDRESSES).exchange().expectStatus().isOk()
+		webTestClient.delete().uri(uriBuilder -> uriBuilder.path(API_ADDRESSES).path("/{id}").build(id1))
+				.headers(headers -> headers.setBearerAuth(jwt)).exchange().expectStatus().isOk();
+		List<AddressDto> allAddresses = webTestClient.get().uri(API_ADDRESSES)
+				.headers(headers -> headers.setBearerAuth(jwt)).exchange().expectStatus().isOk()
 				.expectBodyList(AddressDto.class).returnResult().getResponseBody();
 		// Assert
 		Collections.sort(allAddresses, Comparator.comparing(AddressDto::getHouseNumber));
@@ -338,12 +383,15 @@ class AddressRestControllerIntegrationTest {
 		newAddress3.setStreet("Harmadik utca");
 		newAddress3.setHouseNumber("3");
 
-		Long id1 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress1).exchange().expectStatus().isOk()
-				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
-		Long id2 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress2).exchange().expectStatus().isOk()
-				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
-		Long id3 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress3).exchange().expectStatus().isOk()
-				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
+		Long id1 = webTestClient.post().uri(API_ADDRESSES).headers(headers -> headers.setBearerAuth(jwt))
+				.bodyValue(newAddress1).exchange().expectStatus().isOk().expectBody(AddressDto.class).returnResult()
+				.getResponseBody().getId();
+		Long id2 = webTestClient.post().uri(API_ADDRESSES).headers(headers -> headers.setBearerAuth(jwt))
+				.bodyValue(newAddress2).exchange().expectStatus().isOk().expectBody(AddressDto.class).returnResult()
+				.getResponseBody().getId();
+		Long id3 = webTestClient.post().uri(API_ADDRESSES).headers(headers -> headers.setBearerAuth(jwt))
+				.bodyValue(newAddress3).exchange().expectStatus().isOk().expectBody(AddressDto.class).returnResult()
+				.getResponseBody().getId();
 
 		AddressDto modifiedAddress = new AddressDto();
 		modifiedAddress.setId(id1);
@@ -355,8 +403,9 @@ class AddressRestControllerIntegrationTest {
 
 		// Act
 		AddressDto updatedAddress = webTestClient.put()
-				.uri(uriBuilder -> uriBuilder.path(API_ADDRESSES).path("/{id}").build(id1)).bodyValue(modifiedAddress)
-				.exchange().expectStatus().isOk().expectBody(AddressDto.class).returnResult().getResponseBody();
+				.uri(uriBuilder -> uriBuilder.path(API_ADDRESSES).path("/{id}").build(id1))
+				.headers(headers -> headers.setBearerAuth(jwt)).bodyValue(modifiedAddress).exchange().expectStatus()
+				.isOk().expectBody(AddressDto.class).returnResult().getResponseBody();
 		// Assert
 		assertThat(updatedAddress.getId()).isEqualTo(modifiedAddress.getId());
 		assertThat(updatedAddress.getCountry()).isEqualTo(modifiedAddress.getCountry());
@@ -390,12 +439,15 @@ class AddressRestControllerIntegrationTest {
 		newAddress3.setStreet("Harmadik utca");
 		newAddress3.setHouseNumber("3");
 
-		Long id1 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress1).exchange().expectStatus().isOk()
-				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
-		Long id2 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress2).exchange().expectStatus().isOk()
-				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
-		Long id3 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress3).exchange().expectStatus().isOk()
-				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
+		Long id1 = webTestClient.post().uri(API_ADDRESSES).headers(headers -> headers.setBearerAuth(jwt))
+				.bodyValue(newAddress1).exchange().expectStatus().isOk().expectBody(AddressDto.class).returnResult()
+				.getResponseBody().getId();
+		Long id2 = webTestClient.post().uri(API_ADDRESSES).headers(headers -> headers.setBearerAuth(jwt))
+				.bodyValue(newAddress2).exchange().expectStatus().isOk().expectBody(AddressDto.class).returnResult()
+				.getResponseBody().getId();
+		Long id3 = webTestClient.post().uri(API_ADDRESSES).headers(headers -> headers.setBearerAuth(jwt))
+				.bodyValue(newAddress3).exchange().expectStatus().isOk().expectBody(AddressDto.class).returnResult()
+				.getResponseBody().getId();
 
 		AddressDto modifiedAddress = new AddressDto();
 		modifiedAddress.setId(id1);
@@ -406,8 +458,8 @@ class AddressRestControllerIntegrationTest {
 		modifiedAddress.setHouseNumber("9");
 
 		// Act
-		webTestClient.put().uri(uriBuilder -> uriBuilder.path(API_ADDRESSES).path("/{id}").build(id1)).exchange()
-				.expectStatus().isBadRequest();
+		webTestClient.put().uri(uriBuilder -> uriBuilder.path(API_ADDRESSES).path("/{id}").build(id1))
+				.headers(headers -> headers.setBearerAuth(jwt)).exchange().expectStatus().isBadRequest();
 	}
 
 	@Test
@@ -434,12 +486,15 @@ class AddressRestControllerIntegrationTest {
 		newAddress3.setStreet("Harmadik utca");
 		newAddress3.setHouseNumber("3");
 
-		Long id1 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress1).exchange().expectStatus().isOk()
-				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
-		Long id2 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress2).exchange().expectStatus().isOk()
-				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
-		Long id3 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress3).exchange().expectStatus().isOk()
-				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
+		Long id1 = webTestClient.post().uri(API_ADDRESSES).headers(headers -> headers.setBearerAuth(jwt))
+				.bodyValue(newAddress1).exchange().expectStatus().isOk().expectBody(AddressDto.class).returnResult()
+				.getResponseBody().getId();
+		Long id2 = webTestClient.post().uri(API_ADDRESSES).headers(headers -> headers.setBearerAuth(jwt))
+				.bodyValue(newAddress2).exchange().expectStatus().isOk().expectBody(AddressDto.class).returnResult()
+				.getResponseBody().getId();
+		Long id3 = webTestClient.post().uri(API_ADDRESSES).headers(headers -> headers.setBearerAuth(jwt))
+				.bodyValue(newAddress3).exchange().expectStatus().isOk().expectBody(AddressDto.class).returnResult()
+				.getResponseBody().getId();
 
 		AddressDto modifiedAddress = new AddressDto();
 		modifiedAddress.setId(id1 + 1);
@@ -451,7 +506,8 @@ class AddressRestControllerIntegrationTest {
 
 		// Act
 		webTestClient.put().uri(uriBuilder -> uriBuilder.path(API_ADDRESSES).path("/{id}").build(id1))
-				.bodyValue(modifiedAddress).exchange().expectStatus().isBadRequest();
+				.headers(headers -> headers.setBearerAuth(jwt)).bodyValue(modifiedAddress).exchange().expectStatus()
+				.isBadRequest();
 	}
 
 	@Test
@@ -478,12 +534,15 @@ class AddressRestControllerIntegrationTest {
 		newAddress3.setStreet("Harmadik utca");
 		newAddress3.setHouseNumber("3");
 
-		Long id1 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress1).exchange().expectStatus().isOk()
-				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
-		Long id2 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress2).exchange().expectStatus().isOk()
-				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
-		Long id3 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress3).exchange().expectStatus().isOk()
-				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
+		Long id1 = webTestClient.post().uri(API_ADDRESSES).headers(headers -> headers.setBearerAuth(jwt))
+				.bodyValue(newAddress1).exchange().expectStatus().isOk().expectBody(AddressDto.class).returnResult()
+				.getResponseBody().getId();
+		Long id2 = webTestClient.post().uri(API_ADDRESSES).headers(headers -> headers.setBearerAuth(jwt))
+				.bodyValue(newAddress2).exchange().expectStatus().isOk().expectBody(AddressDto.class).returnResult()
+				.getResponseBody().getId();
+		Long id3 = webTestClient.post().uri(API_ADDRESSES).headers(headers -> headers.setBearerAuth(jwt))
+				.bodyValue(newAddress3).exchange().expectStatus().isOk().expectBody(AddressDto.class).returnResult()
+				.getResponseBody().getId();
 
 		AddressDto modifiedAddress = new AddressDto();
 		modifiedAddress.setId(id1);
@@ -495,7 +554,8 @@ class AddressRestControllerIntegrationTest {
 
 		// Act
 		webTestClient.put().uri(uriBuilder -> uriBuilder.path(API_ADDRESSES).path("/{id}").build(id1))
-				.bodyValue(modifiedAddress).exchange().expectStatus().isBadRequest();
+				.headers(headers -> headers.setBearerAuth(jwt)).bodyValue(modifiedAddress).exchange().expectStatus()
+				.isBadRequest();
 	}
 
 	@Test
@@ -522,12 +582,15 @@ class AddressRestControllerIntegrationTest {
 		newAddress3.setStreet("Harmadik utca");
 		newAddress3.setHouseNumber("3");
 
-		Long id1 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress1).exchange().expectStatus().isOk()
-				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
-		Long id2 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress2).exchange().expectStatus().isOk()
-				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
-		Long id3 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress3).exchange().expectStatus().isOk()
-				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
+		Long id1 = webTestClient.post().uri(API_ADDRESSES).headers(headers -> headers.setBearerAuth(jwt))
+				.bodyValue(newAddress1).exchange().expectStatus().isOk().expectBody(AddressDto.class).returnResult()
+				.getResponseBody().getId();
+		Long id2 = webTestClient.post().uri(API_ADDRESSES).headers(headers -> headers.setBearerAuth(jwt))
+				.bodyValue(newAddress2).exchange().expectStatus().isOk().expectBody(AddressDto.class).returnResult()
+				.getResponseBody().getId();
+		Long id3 = webTestClient.post().uri(API_ADDRESSES).headers(headers -> headers.setBearerAuth(jwt))
+				.bodyValue(newAddress3).exchange().expectStatus().isOk().expectBody(AddressDto.class).returnResult()
+				.getResponseBody().getId();
 
 		long nonExistentId = Math.max(id1, Math.max(id2, id3)) + 1;
 		AddressDto modifiedAddress = new AddressDto();
@@ -541,7 +604,8 @@ class AddressRestControllerIntegrationTest {
 		// Act
 		webTestClient.put()
 				.uri(uriBuilder -> uriBuilder.path(API_ADDRESSES).path("/{id}").build(Long.toString(nonExistentId)))
-				.bodyValue(modifiedAddress).exchange().expectStatus().isBadRequest();
+				.headers(headers -> headers.setBearerAuth(jwt)).bodyValue(modifiedAddress).exchange().expectStatus()
+				.isBadRequest();
 	}
 
 	@Test
@@ -568,12 +632,15 @@ class AddressRestControllerIntegrationTest {
 		newAddress3.setStreet("Harmadik utca");
 		newAddress3.setHouseNumber("3");
 
-		Long id1 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress1).exchange().expectStatus().isOk()
-				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
-		Long id2 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress2).exchange().expectStatus().isOk()
-				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
-		Long id3 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress3).exchange().expectStatus().isOk()
-				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
+		Long id1 = webTestClient.post().uri(API_ADDRESSES).headers(headers -> headers.setBearerAuth(jwt))
+				.bodyValue(newAddress1).exchange().expectStatus().isOk().expectBody(AddressDto.class).returnResult()
+				.getResponseBody().getId();
+		Long id2 = webTestClient.post().uri(API_ADDRESSES).headers(headers -> headers.setBearerAuth(jwt))
+				.bodyValue(newAddress2).exchange().expectStatus().isOk().expectBody(AddressDto.class).returnResult()
+				.getResponseBody().getId();
+		Long id3 = webTestClient.post().uri(API_ADDRESSES).headers(headers -> headers.setBearerAuth(jwt))
+				.bodyValue(newAddress3).exchange().expectStatus().isOk().expectBody(AddressDto.class).returnResult()
+				.getResponseBody().getId();
 
 		AddressDto filter = new AddressDto();
 		filter.setCity("Deb");
@@ -581,8 +648,8 @@ class AddressRestControllerIntegrationTest {
 		List<AddressDto> resultList = webTestClient.post()
 				.uri(uriBuilder -> uriBuilder.path(API_ADDRESSES).path("/search").queryParam("page", "0")
 						.queryParam("size", "3").queryParam("sort", "id,asc").build())
-				.bodyValue(filter).exchange().expectStatus().isOk().expectBodyList(AddressDto.class).returnResult()
-				.getResponseBody();
+				.headers(headers -> headers.setBearerAuth(jwt)).bodyValue(filter).exchange().expectStatus().isOk()
+				.expectBodyList(AddressDto.class).returnResult().getResponseBody();
 		// Assert
 		assertThat(resultList).isEmpty();
 	}
@@ -611,12 +678,15 @@ class AddressRestControllerIntegrationTest {
 		newAddress3.setStreet("Harmadik utca");
 		newAddress3.setHouseNumber("3");
 
-		Long id1 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress1).exchange().expectStatus().isOk()
-				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
-		Long id2 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress2).exchange().expectStatus().isOk()
-				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
-		Long id3 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress3).exchange().expectStatus().isOk()
-				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
+		Long id1 = webTestClient.post().uri(API_ADDRESSES).headers(headers -> headers.setBearerAuth(jwt))
+				.bodyValue(newAddress1).exchange().expectStatus().isOk().expectBody(AddressDto.class).returnResult()
+				.getResponseBody().getId();
+		Long id2 = webTestClient.post().uri(API_ADDRESSES).headers(headers -> headers.setBearerAuth(jwt))
+				.bodyValue(newAddress2).exchange().expectStatus().isOk().expectBody(AddressDto.class).returnResult()
+				.getResponseBody().getId();
+		Long id3 = webTestClient.post().uri(API_ADDRESSES).headers(headers -> headers.setBearerAuth(jwt))
+				.bodyValue(newAddress3).exchange().expectStatus().isOk().expectBody(AddressDto.class).returnResult()
+				.getResponseBody().getId();
 
 		AddressDto filter = new AddressDto();
 		filter.setCity("Bud");
@@ -624,8 +694,8 @@ class AddressRestControllerIntegrationTest {
 		EntityExchangeResult<List<AddressDto>> result = webTestClient.post()
 				.uri(uriBuilder -> uriBuilder.path(API_ADDRESSES).path("/search").queryParam("page", "0")
 						.queryParam("size", "3").queryParam("sort", "id,asc").build())
-				.bodyValue(filter).exchange().expectStatus().isOk().expectHeader().exists("X-Total-Count")
-				.expectBodyList(AddressDto.class).returnResult();
+				.headers(headers -> headers.setBearerAuth(jwt)).bodyValue(filter).exchange().expectStatus().isOk()
+				.expectHeader().exists("X-Total-Count").expectBodyList(AddressDto.class).returnResult();
 		// Assert
 		String totalCountHeader = result.getResponseHeaders().getFirst("X-Total-Count");
 		assertThat(Integer.parseInt(totalCountHeader)).isEqualTo(3);
@@ -675,12 +745,15 @@ class AddressRestControllerIntegrationTest {
 		newAddress3.setStreet("Harmadik utca");
 		newAddress3.setHouseNumber("3");
 
-		Long id1 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress1).exchange().expectStatus().isOk()
-				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
-		Long id2 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress2).exchange().expectStatus().isOk()
-				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
-		Long id3 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress3).exchange().expectStatus().isOk()
-				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
+		Long id1 = webTestClient.post().uri(API_ADDRESSES).headers(headers -> headers.setBearerAuth(jwt))
+				.bodyValue(newAddress1).exchange().expectStatus().isOk().expectBody(AddressDto.class).returnResult()
+				.getResponseBody().getId();
+		Long id2 = webTestClient.post().uri(API_ADDRESSES).headers(headers -> headers.setBearerAuth(jwt))
+				.bodyValue(newAddress2).exchange().expectStatus().isOk().expectBody(AddressDto.class).returnResult()
+				.getResponseBody().getId();
+		Long id3 = webTestClient.post().uri(API_ADDRESSES).headers(headers -> headers.setBearerAuth(jwt))
+				.bodyValue(newAddress3).exchange().expectStatus().isOk().expectBody(AddressDto.class).returnResult()
+				.getResponseBody().getId();
 
 		AddressDto filter = new AddressDto();
 		filter.setCity("Bud");
@@ -688,8 +761,8 @@ class AddressRestControllerIntegrationTest {
 		EntityExchangeResult<List<AddressDto>> result = webTestClient.post()
 				.uri(uriBuilder -> uriBuilder.path(API_ADDRESSES).path("/search").queryParam("page", "0")
 						.queryParam("size", "1").queryParam("sort", "id,asc").build())
-				.bodyValue(filter).exchange().expectStatus().isOk().expectHeader().exists("X-Total-Count")
-				.expectBodyList(AddressDto.class).returnResult();
+				.headers(headers -> headers.setBearerAuth(jwt)).bodyValue(filter).exchange().expectStatus().isOk()
+				.expectHeader().exists("X-Total-Count").expectBodyList(AddressDto.class).returnResult();
 		// Assert
 		String totalCountHeader = result.getResponseHeaders().getFirst("X-Total-Count");
 		assertThat(Integer.parseInt(totalCountHeader)).isEqualTo(3);
@@ -727,12 +800,15 @@ class AddressRestControllerIntegrationTest {
 		newAddress3.setStreet("Harmadik utca");
 		newAddress3.setHouseNumber("3");
 
-		Long id1 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress1).exchange().expectStatus().isOk()
-				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
-		Long id2 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress2).exchange().expectStatus().isOk()
-				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
-		Long id3 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress3).exchange().expectStatus().isOk()
-				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
+		Long id1 = webTestClient.post().uri(API_ADDRESSES).headers(headers -> headers.setBearerAuth(jwt))
+				.bodyValue(newAddress1).exchange().expectStatus().isOk().expectBody(AddressDto.class).returnResult()
+				.getResponseBody().getId();
+		Long id2 = webTestClient.post().uri(API_ADDRESSES).headers(headers -> headers.setBearerAuth(jwt))
+				.bodyValue(newAddress2).exchange().expectStatus().isOk().expectBody(AddressDto.class).returnResult()
+				.getResponseBody().getId();
+		Long id3 = webTestClient.post().uri(API_ADDRESSES).headers(headers -> headers.setBearerAuth(jwt))
+				.bodyValue(newAddress3).exchange().expectStatus().isOk().expectBody(AddressDto.class).returnResult()
+				.getResponseBody().getId();
 
 		AddressDto filter = new AddressDto();
 		filter.setCity("Bud");
@@ -740,8 +816,8 @@ class AddressRestControllerIntegrationTest {
 		EntityExchangeResult<List<AddressDto>> result = webTestClient.post()
 				.uri(uriBuilder -> uriBuilder.path(API_ADDRESSES).path("/search").queryParam("page", "1")
 						.queryParam("size", "1").queryParam("sort", "id,asc").build())
-				.bodyValue(filter).exchange().expectStatus().isOk().expectHeader().exists("X-Total-Count")
-				.expectBodyList(AddressDto.class).returnResult();
+				.headers(headers -> headers.setBearerAuth(jwt)).bodyValue(filter).exchange().expectStatus().isOk()
+				.expectHeader().exists("X-Total-Count").expectBodyList(AddressDto.class).returnResult();
 		// Assert
 		String totalCountHeader = result.getResponseHeaders().getFirst("X-Total-Count");
 		assertThat(Integer.parseInt(totalCountHeader)).isEqualTo(3);
@@ -779,12 +855,15 @@ class AddressRestControllerIntegrationTest {
 		newAddress3.setStreet("Harmadik utca");
 		newAddress3.setHouseNumber("3");
 
-		Long id1 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress1).exchange().expectStatus().isOk()
-				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
-		Long id2 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress2).exchange().expectStatus().isOk()
-				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
-		Long id3 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress3).exchange().expectStatus().isOk()
-				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
+		Long id1 = webTestClient.post().uri(API_ADDRESSES).headers(headers -> headers.setBearerAuth(jwt))
+				.bodyValue(newAddress1).exchange().expectStatus().isOk().expectBody(AddressDto.class).returnResult()
+				.getResponseBody().getId();
+		Long id2 = webTestClient.post().uri(API_ADDRESSES).headers(headers -> headers.setBearerAuth(jwt))
+				.bodyValue(newAddress2).exchange().expectStatus().isOk().expectBody(AddressDto.class).returnResult()
+				.getResponseBody().getId();
+		Long id3 = webTestClient.post().uri(API_ADDRESSES).headers(headers -> headers.setBearerAuth(jwt))
+				.bodyValue(newAddress3).exchange().expectStatus().isOk().expectBody(AddressDto.class).returnResult()
+				.getResponseBody().getId();
 
 		AddressDto filter = new AddressDto();
 		filter.setCity("Bud");
@@ -792,8 +871,8 @@ class AddressRestControllerIntegrationTest {
 		EntityExchangeResult<List<AddressDto>> result = webTestClient.post()
 				.uri(uriBuilder -> uriBuilder.path(API_ADDRESSES).path("/search").queryParam("page", "2")
 						.queryParam("size", "1").queryParam("sort", "id,asc").build())
-				.bodyValue(filter).exchange().expectStatus().isOk().expectHeader().exists("X-Total-Count")
-				.expectBodyList(AddressDto.class).returnResult();
+				.headers(headers -> headers.setBearerAuth(jwt)).bodyValue(filter).exchange().expectStatus().isOk()
+				.expectHeader().exists("X-Total-Count").expectBodyList(AddressDto.class).returnResult();
 		// Assert
 		String totalCountHeader = result.getResponseHeaders().getFirst("X-Total-Count");
 		assertThat(Integer.parseInt(totalCountHeader)).isEqualTo(3);
@@ -831,12 +910,15 @@ class AddressRestControllerIntegrationTest {
 		newAddress3.setStreet("Harmadik utca");
 		newAddress3.setHouseNumber("3");
 
-		Long id1 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress1).exchange().expectStatus().isOk()
-				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
-		Long id2 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress2).exchange().expectStatus().isOk()
-				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
-		Long id3 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress3).exchange().expectStatus().isOk()
-				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
+		Long id1 = webTestClient.post().uri(API_ADDRESSES).headers(headers -> headers.setBearerAuth(jwt))
+				.bodyValue(newAddress1).exchange().expectStatus().isOk().expectBody(AddressDto.class).returnResult()
+				.getResponseBody().getId();
+		Long id2 = webTestClient.post().uri(API_ADDRESSES).headers(headers -> headers.setBearerAuth(jwt))
+				.bodyValue(newAddress2).exchange().expectStatus().isOk().expectBody(AddressDto.class).returnResult()
+				.getResponseBody().getId();
+		Long id3 = webTestClient.post().uri(API_ADDRESSES).headers(headers -> headers.setBearerAuth(jwt))
+				.bodyValue(newAddress3).exchange().expectStatus().isOk().expectBody(AddressDto.class).returnResult()
+				.getResponseBody().getId();
 
 		AddressDto filter = new AddressDto();
 		filter.setCity("Bud");
@@ -844,8 +926,8 @@ class AddressRestControllerIntegrationTest {
 		EntityExchangeResult<List<AddressDto>> result = webTestClient.post()
 				.uri(uriBuilder -> uriBuilder.path(API_ADDRESSES).path("/search").queryParam("page", "0")
 						.queryParam("sort", "id,asc").build())
-				.bodyValue(filter).exchange().expectStatus().isOk().expectHeader().exists("X-Total-Count")
-				.expectBodyList(AddressDto.class).returnResult();
+				.headers(headers -> headers.setBearerAuth(jwt)).bodyValue(filter).exchange().expectStatus().isOk()
+				.expectHeader().exists("X-Total-Count").expectBodyList(AddressDto.class).returnResult();
 		// Assert
 		String totalCountHeader = result.getResponseHeaders().getFirst("X-Total-Count");
 		assertThat(Integer.parseInt(totalCountHeader)).isEqualTo(3);
@@ -895,12 +977,15 @@ class AddressRestControllerIntegrationTest {
 		newAddress3.setStreet("Harmadik utca");
 		newAddress3.setHouseNumber("3");
 
-		Long id1 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress1).exchange().expectStatus().isOk()
-				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
-		Long id2 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress2).exchange().expectStatus().isOk()
-				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
-		Long id3 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress3).exchange().expectStatus().isOk()
-				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
+		Long id1 = webTestClient.post().uri(API_ADDRESSES).headers(headers -> headers.setBearerAuth(jwt))
+				.bodyValue(newAddress1).exchange().expectStatus().isOk().expectBody(AddressDto.class).returnResult()
+				.getResponseBody().getId();
+		Long id2 = webTestClient.post().uri(API_ADDRESSES).headers(headers -> headers.setBearerAuth(jwt))
+				.bodyValue(newAddress2).exchange().expectStatus().isOk().expectBody(AddressDto.class).returnResult()
+				.getResponseBody().getId();
+		Long id3 = webTestClient.post().uri(API_ADDRESSES).headers(headers -> headers.setBearerAuth(jwt))
+				.bodyValue(newAddress3).exchange().expectStatus().isOk().expectBody(AddressDto.class).returnResult()
+				.getResponseBody().getId();
 
 		AddressDto filter = new AddressDto();
 		filter.setCity("Bud");
@@ -908,8 +993,8 @@ class AddressRestControllerIntegrationTest {
 		EntityExchangeResult<List<AddressDto>> result = webTestClient.post()
 				.uri(uriBuilder -> uriBuilder.path(API_ADDRESSES).path("/search").queryParam("size", "3")
 						.queryParam("sort", "id,asc").build())
-				.bodyValue(filter).exchange().expectStatus().isOk().expectHeader().exists("X-Total-Count")
-				.expectBodyList(AddressDto.class).returnResult();
+				.headers(headers -> headers.setBearerAuth(jwt)).bodyValue(filter).exchange().expectStatus().isOk()
+				.expectHeader().exists("X-Total-Count").expectBodyList(AddressDto.class).returnResult();
 		// Assert
 		String totalCountHeader = result.getResponseHeaders().getFirst("X-Total-Count");
 		assertThat(Integer.parseInt(totalCountHeader)).isEqualTo(3);
@@ -959,12 +1044,15 @@ class AddressRestControllerIntegrationTest {
 		newAddress3.setStreet("Harmadik utca");
 		newAddress3.setHouseNumber("3");
 
-		Long id1 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress1).exchange().expectStatus().isOk()
-				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
-		Long id2 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress2).exchange().expectStatus().isOk()
-				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
-		Long id3 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress3).exchange().expectStatus().isOk()
-				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
+		Long id1 = webTestClient.post().uri(API_ADDRESSES).headers(headers -> headers.setBearerAuth(jwt))
+				.bodyValue(newAddress1).exchange().expectStatus().isOk().expectBody(AddressDto.class).returnResult()
+				.getResponseBody().getId();
+		Long id2 = webTestClient.post().uri(API_ADDRESSES).headers(headers -> headers.setBearerAuth(jwt))
+				.bodyValue(newAddress2).exchange().expectStatus().isOk().expectBody(AddressDto.class).returnResult()
+				.getResponseBody().getId();
+		Long id3 = webTestClient.post().uri(API_ADDRESSES).headers(headers -> headers.setBearerAuth(jwt))
+				.bodyValue(newAddress3).exchange().expectStatus().isOk().expectBody(AddressDto.class).returnResult()
+				.getResponseBody().getId();
 
 		AddressDto filter = new AddressDto();
 		filter.setCity("Bud");
@@ -972,8 +1060,8 @@ class AddressRestControllerIntegrationTest {
 		EntityExchangeResult<List<AddressDto>> result = webTestClient.post()
 				.uri(uriBuilder -> uriBuilder.path(API_ADDRESSES).path("/search").queryParam("page", "0")
 						.queryParam("size", "3").build())
-				.bodyValue(filter).exchange().expectStatus().isOk().expectHeader().exists("X-Total-Count")
-				.expectBodyList(AddressDto.class).returnResult();
+				.headers(headers -> headers.setBearerAuth(jwt)).bodyValue(filter).exchange().expectStatus().isOk()
+				.expectHeader().exists("X-Total-Count").expectBodyList(AddressDto.class).returnResult();
 		// Assert
 		String totalCountHeader = result.getResponseHeaders().getFirst("X-Total-Count");
 		assertThat(Integer.parseInt(totalCountHeader)).isEqualTo(3);
@@ -1022,12 +1110,15 @@ class AddressRestControllerIntegrationTest {
 		newAddress3.setStreet("Harmadik utca");
 		newAddress3.setHouseNumber("3");
 
-		Long id1 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress1).exchange().expectStatus().isOk()
-				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
-		Long id2 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress2).exchange().expectStatus().isOk()
-				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
-		Long id3 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress3).exchange().expectStatus().isOk()
-				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
+		Long id1 = webTestClient.post().uri(API_ADDRESSES).headers(headers -> headers.setBearerAuth(jwt))
+				.bodyValue(newAddress1).exchange().expectStatus().isOk().expectBody(AddressDto.class).returnResult()
+				.getResponseBody().getId();
+		Long id2 = webTestClient.post().uri(API_ADDRESSES).headers(headers -> headers.setBearerAuth(jwt))
+				.bodyValue(newAddress2).exchange().expectStatus().isOk().expectBody(AddressDto.class).returnResult()
+				.getResponseBody().getId();
+		Long id3 = webTestClient.post().uri(API_ADDRESSES).headers(headers -> headers.setBearerAuth(jwt))
+				.bodyValue(newAddress3).exchange().expectStatus().isOk().expectBody(AddressDto.class).returnResult()
+				.getResponseBody().getId();
 
 		AddressDto filter = new AddressDto();
 		filter.setStreet("Negyedik");
@@ -1035,8 +1126,8 @@ class AddressRestControllerIntegrationTest {
 		List<AddressDto> resultList = webTestClient.post()
 				.uri(uriBuilder -> uriBuilder.path(API_ADDRESSES).path("/search").queryParam("page", "0")
 						.queryParam("size", "3").queryParam("sort", "id,asc").build())
-				.bodyValue(filter).exchange().expectStatus().isOk().expectBodyList(AddressDto.class).returnResult()
-				.getResponseBody();
+				.headers(headers -> headers.setBearerAuth(jwt)).bodyValue(filter).exchange().expectStatus().isOk()
+				.expectBodyList(AddressDto.class).returnResult().getResponseBody();
 		// Assert
 		assertThat(resultList).isEmpty();
 	}
@@ -1065,12 +1156,15 @@ class AddressRestControllerIntegrationTest {
 		newAddress3.setStreet("Harmadik utca");
 		newAddress3.setHouseNumber("3");
 
-		Long id1 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress1).exchange().expectStatus().isOk()
-				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
-		Long id2 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress2).exchange().expectStatus().isOk()
-				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
-		Long id3 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress3).exchange().expectStatus().isOk()
-				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
+		Long id1 = webTestClient.post().uri(API_ADDRESSES).headers(headers -> headers.setBearerAuth(jwt))
+				.bodyValue(newAddress1).exchange().expectStatus().isOk().expectBody(AddressDto.class).returnResult()
+				.getResponseBody().getId();
+		Long id2 = webTestClient.post().uri(API_ADDRESSES).headers(headers -> headers.setBearerAuth(jwt))
+				.bodyValue(newAddress2).exchange().expectStatus().isOk().expectBody(AddressDto.class).returnResult()
+				.getResponseBody().getId();
+		Long id3 = webTestClient.post().uri(API_ADDRESSES).headers(headers -> headers.setBearerAuth(jwt))
+				.bodyValue(newAddress3).exchange().expectStatus().isOk().expectBody(AddressDto.class).returnResult()
+				.getResponseBody().getId();
 
 		AddressDto filter = new AddressDto();
 		filter.setStreet("Mas");
@@ -1078,8 +1172,8 @@ class AddressRestControllerIntegrationTest {
 		EntityExchangeResult<List<AddressDto>> result = webTestClient.post()
 				.uri(uriBuilder -> uriBuilder.path(API_ADDRESSES).path("/search").queryParam("page", "0")
 						.queryParam("size", "3").queryParam("sort", "id,asc").build())
-				.bodyValue(filter).exchange().expectStatus().isOk().expectHeader().exists("X-Total-Count")
-				.expectBodyList(AddressDto.class).returnResult();
+				.headers(headers -> headers.setBearerAuth(jwt)).bodyValue(filter).exchange().expectStatus().isOk()
+				.expectHeader().exists("X-Total-Count").expectBodyList(AddressDto.class).returnResult();
 		// Assert
 		String totalCountHeader = result.getResponseHeaders().getFirst("X-Total-Count");
 		assertThat(Integer.parseInt(totalCountHeader)).isEqualTo(1);
@@ -1117,12 +1211,15 @@ class AddressRestControllerIntegrationTest {
 		newAddress3.setStreet("Harmadik utca");
 		newAddress3.setHouseNumber("3");
 
-		Long id1 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress1).exchange().expectStatus().isOk()
-				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
-		Long id2 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress2).exchange().expectStatus().isOk()
-				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
-		Long id3 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress3).exchange().expectStatus().isOk()
-				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
+		Long id1 = webTestClient.post().uri(API_ADDRESSES).headers(headers -> headers.setBearerAuth(jwt))
+				.bodyValue(newAddress1).exchange().expectStatus().isOk().expectBody(AddressDto.class).returnResult()
+				.getResponseBody().getId();
+		Long id2 = webTestClient.post().uri(API_ADDRESSES).headers(headers -> headers.setBearerAuth(jwt))
+				.bodyValue(newAddress2).exchange().expectStatus().isOk().expectBody(AddressDto.class).returnResult()
+				.getResponseBody().getId();
+		Long id3 = webTestClient.post().uri(API_ADDRESSES).headers(headers -> headers.setBearerAuth(jwt))
+				.bodyValue(newAddress3).exchange().expectStatus().isOk().expectBody(AddressDto.class).returnResult()
+				.getResponseBody().getId();
 
 		AddressDto filter = new AddressDto();
 		filter.setCountry("H");
@@ -1130,8 +1227,8 @@ class AddressRestControllerIntegrationTest {
 		List<AddressDto> resultList = webTestClient.post()
 				.uri(uriBuilder -> uriBuilder.path(API_ADDRESSES).path("/search").queryParam("page", "0")
 						.queryParam("size", "3").queryParam("sort", "id,asc").build())
-				.bodyValue(filter).exchange().expectStatus().isOk().expectBodyList(AddressDto.class).returnResult()
-				.getResponseBody();
+				.headers(headers -> headers.setBearerAuth(jwt)).bodyValue(filter).exchange().expectStatus().isOk()
+				.expectBodyList(AddressDto.class).returnResult().getResponseBody();
 		// Assert
 		assertThat(resultList).isEmpty();
 	}
@@ -1160,12 +1257,15 @@ class AddressRestControllerIntegrationTest {
 		newAddress3.setStreet("Harmadik utca");
 		newAddress3.setHouseNumber("3");
 
-		Long id1 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress1).exchange().expectStatus().isOk()
-				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
-		Long id2 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress2).exchange().expectStatus().isOk()
-				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
-		Long id3 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress3).exchange().expectStatus().isOk()
-				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
+		Long id1 = webTestClient.post().uri(API_ADDRESSES).headers(headers -> headers.setBearerAuth(jwt))
+				.bodyValue(newAddress1).exchange().expectStatus().isOk().expectBody(AddressDto.class).returnResult()
+				.getResponseBody().getId();
+		Long id2 = webTestClient.post().uri(API_ADDRESSES).headers(headers -> headers.setBearerAuth(jwt))
+				.bodyValue(newAddress2).exchange().expectStatus().isOk().expectBody(AddressDto.class).returnResult()
+				.getResponseBody().getId();
+		Long id3 = webTestClient.post().uri(API_ADDRESSES).headers(headers -> headers.setBearerAuth(jwt))
+				.bodyValue(newAddress3).exchange().expectStatus().isOk().expectBody(AddressDto.class).returnResult()
+				.getResponseBody().getId();
 
 		AddressDto filter = new AddressDto();
 		filter.setCountry("HU");
@@ -1173,8 +1273,8 @@ class AddressRestControllerIntegrationTest {
 		EntityExchangeResult<List<AddressDto>> result = webTestClient.post()
 				.uri(uriBuilder -> uriBuilder.path(API_ADDRESSES).path("/search").queryParam("page", "0")
 						.queryParam("size", "3").queryParam("sort", "id,asc").build())
-				.bodyValue(filter).exchange().expectStatus().isOk().expectHeader().exists("X-Total-Count")
-				.expectBodyList(AddressDto.class).returnResult();
+				.headers(headers -> headers.setBearerAuth(jwt)).bodyValue(filter).exchange().expectStatus().isOk()
+				.expectHeader().exists("X-Total-Count").expectBodyList(AddressDto.class).returnResult();
 		// Assert
 		String totalCountHeader = result.getResponseHeaders().getFirst("X-Total-Count");
 		assertThat(Integer.parseInt(totalCountHeader)).isEqualTo(3);
@@ -1224,12 +1324,15 @@ class AddressRestControllerIntegrationTest {
 		newAddress3.setStreet("Harmadik utca");
 		newAddress3.setHouseNumber("3");
 
-		Long id1 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress1).exchange().expectStatus().isOk()
-				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
-		Long id2 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress2).exchange().expectStatus().isOk()
-				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
-		Long id3 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress3).exchange().expectStatus().isOk()
-				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
+		Long id1 = webTestClient.post().uri(API_ADDRESSES).headers(headers -> headers.setBearerAuth(jwt))
+				.bodyValue(newAddress1).exchange().expectStatus().isOk().expectBody(AddressDto.class).returnResult()
+				.getResponseBody().getId();
+		Long id2 = webTestClient.post().uri(API_ADDRESSES).headers(headers -> headers.setBearerAuth(jwt))
+				.bodyValue(newAddress2).exchange().expectStatus().isOk().expectBody(AddressDto.class).returnResult()
+				.getResponseBody().getId();
+		Long id3 = webTestClient.post().uri(API_ADDRESSES).headers(headers -> headers.setBearerAuth(jwt))
+				.bodyValue(newAddress3).exchange().expectStatus().isOk().expectBody(AddressDto.class).returnResult()
+				.getResponseBody().getId();
 
 		AddressDto filter = new AddressDto();
 		filter.setZip("11");
@@ -1237,8 +1340,8 @@ class AddressRestControllerIntegrationTest {
 		List<AddressDto> resultList = webTestClient.post()
 				.uri(uriBuilder -> uriBuilder.path(API_ADDRESSES).path("/search").queryParam("page", "0")
 						.queryParam("size", "3").queryParam("sort", "id,asc").build())
-				.bodyValue(filter).exchange().expectStatus().isOk().expectBodyList(AddressDto.class).returnResult()
-				.getResponseBody();
+				.headers(headers -> headers.setBearerAuth(jwt)).bodyValue(filter).exchange().expectStatus().isOk()
+				.expectBodyList(AddressDto.class).returnResult().getResponseBody();
 		// Assert
 		assertThat(resultList).isEmpty();
 	}
@@ -1267,12 +1370,15 @@ class AddressRestControllerIntegrationTest {
 		newAddress3.setStreet("Harmadik utca");
 		newAddress3.setHouseNumber("3");
 
-		Long id1 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress1).exchange().expectStatus().isOk()
-				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
-		Long id2 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress2).exchange().expectStatus().isOk()
-				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
-		Long id3 = webTestClient.post().uri(API_ADDRESSES).bodyValue(newAddress3).exchange().expectStatus().isOk()
-				.expectBody(AddressDto.class).returnResult().getResponseBody().getId();
+		Long id1 = webTestClient.post().uri(API_ADDRESSES).headers(headers -> headers.setBearerAuth(jwt))
+				.bodyValue(newAddress1).exchange().expectStatus().isOk().expectBody(AddressDto.class).returnResult()
+				.getResponseBody().getId();
+		Long id2 = webTestClient.post().uri(API_ADDRESSES).headers(headers -> headers.setBearerAuth(jwt))
+				.bodyValue(newAddress2).exchange().expectStatus().isOk().expectBody(AddressDto.class).returnResult()
+				.getResponseBody().getId();
+		Long id3 = webTestClient.post().uri(API_ADDRESSES).headers(headers -> headers.setBearerAuth(jwt))
+				.bodyValue(newAddress3).exchange().expectStatus().isOk().expectBody(AddressDto.class).returnResult()
+				.getResponseBody().getId();
 
 		AddressDto filter = new AddressDto();
 		filter.setZip("1111");
@@ -1280,8 +1386,8 @@ class AddressRestControllerIntegrationTest {
 		EntityExchangeResult<List<AddressDto>> result = webTestClient.post()
 				.uri(uriBuilder -> uriBuilder.path(API_ADDRESSES).path("/search").queryParam("page", "0")
 						.queryParam("size", "3").queryParam("sort", "id,asc").build())
-				.bodyValue(filter).exchange().expectStatus().isOk().expectHeader().exists("X-Total-Count")
-				.expectBodyList(AddressDto.class).returnResult();
+				.headers(headers -> headers.setBearerAuth(jwt)).bodyValue(filter).exchange().expectStatus().isOk()
+				.expectHeader().exists("X-Total-Count").expectBodyList(AddressDto.class).returnResult();
 		// Assert
 		String totalCountHeader = result.getResponseHeaders().getFirst("X-Total-Count");
 		assertThat(Integer.parseInt(totalCountHeader)).isEqualTo(1);

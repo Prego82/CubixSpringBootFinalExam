@@ -3,17 +3,18 @@ package hu.cubix.logistics.BalazsPeregi.controller;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.LocalDateTime;
-import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
+import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 import org.springframework.test.web.reactive.server.WebTestClient;
 
 import hu.cubix.logistics.BalazsPeregi.dto.DelayDto;
+import hu.cubix.logistics.BalazsPeregi.dto.LoginDto;
 import hu.cubix.logistics.BalazsPeregi.model.Address;
 import hu.cubix.logistics.BalazsPeregi.model.Milestone;
 import hu.cubix.logistics.BalazsPeregi.model.Section;
@@ -22,9 +23,11 @@ import hu.cubix.logistics.BalazsPeregi.repository.AddressRepository;
 import hu.cubix.logistics.BalazsPeregi.repository.MilestoneRepository;
 import hu.cubix.logistics.BalazsPeregi.repository.SectionRepository;
 import hu.cubix.logistics.BalazsPeregi.repository.TransportPlanRepository;
+import hu.cubix.logistics.BalazsPeregi.security.SecurityConfig;
 
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
 @AutoConfigureTestDatabase
+@AutoConfigureWebTestClient(timeout = "10000m")
 public class TransportPlanRestControllerIntegrationTest {
 	private static final String API_TRANSPORTPLAN = "/api/transportPlans";
 	@Autowired
@@ -39,12 +42,39 @@ public class TransportPlanRestControllerIntegrationTest {
 	@Autowired
 	TransportPlanRepository transportPlanRepo;
 
+	private String jwt;
+
 	@BeforeEach
 	void init() {
 		transportPlanRepo.deleteAll();
 		sectionRepo.deleteAll();
 		milestoneRepo.deleteAll();
 		addressRepo.deleteAll();
+
+		LoginDto loginDto = new LoginDto();
+		loginDto.setUsername(SecurityConfig.TRANSPORT_MANAGER_NAME);
+		loginDto.setPassword(SecurityConfig.PASS);
+		jwt = webTestClient.post().uri("/api/login").bodyValue(loginDto).exchange().expectBody(String.class)
+				.returnResult().getResponseBody();
+	}
+
+	@Test
+	void testValidation() {
+		// Arrange
+		LoginDto loginDto = new LoginDto();
+		loginDto.setUsername(SecurityConfig.ADDRESS_MANAGER_NAME);
+		loginDto.setPassword(SecurityConfig.PASS);
+		String jwt = webTestClient.post().uri("/api/login").bodyValue(loginDto).exchange().expectBody(String.class)
+				.returnResult().getResponseBody();
+		// Act
+		int delay = 15;
+		DelayDto delayDto = new DelayDto(1, delay);
+		webTestClient.post()
+				.uri(uriBuilder -> uriBuilder.path(API_TRANSPORTPLAN).path("/{transportPlanId}/delay")
+						.build(Long.toString(0)))
+				.headers(headers -> headers.setBearerAuth(jwt)).bodyValue(delayDto).exchange().expectStatus()
+				.isForbidden();
+		// Assert
 	}
 
 	@Test
@@ -56,7 +86,8 @@ public class TransportPlanRestControllerIntegrationTest {
 				.save(new Milestone(startAddress, LocalDateTime.of(2025, 02, 12, 0, 0)));
 		Milestone endMilestone = milestoneRepo.save(new Milestone(endAddress, LocalDateTime.of(2025, 02, 13, 0, 0)));
 		Section section = sectionRepo.save(new Section(startMilestone, endMilestone, 0));
-		TransportPlan transportPlan = transportPlanRepo.save(new TransportPlan(1000d, List.of(section)));
+		TransportPlan transportPlan = transportPlanRepo.save(new TransportPlan(1000d));
+		transportPlan.addSection(section);
 
 		long nonExistentMilestoneId = Math.max(startMilestone.getId(), endMilestone.getId()) + 1;
 		int delay = 15;
@@ -65,7 +96,8 @@ public class TransportPlanRestControllerIntegrationTest {
 		webTestClient.post()
 				.uri(uriBuilder -> uriBuilder.path(API_TRANSPORTPLAN).path("/{transportPlanId}/delay")
 						.build(Long.toString(transportPlan.getId())))
-				.bodyValue(delayDto).exchange().expectStatus().isNotFound();
+				.headers(headers -> headers.setBearerAuth(jwt)).bodyValue(delayDto).exchange().expectStatus()
+				.isNotFound();
 		// Assert
 	}
 
@@ -78,7 +110,8 @@ public class TransportPlanRestControllerIntegrationTest {
 				.save(new Milestone(startAddress, LocalDateTime.of(2025, 02, 12, 0, 0)));
 		Milestone endMilestone = milestoneRepo.save(new Milestone(endAddress, LocalDateTime.of(2025, 02, 13, 0, 0)));
 		Section section = sectionRepo.save(new Section(startMilestone, endMilestone, 0));
-		TransportPlan transportPlan = transportPlanRepo.save(new TransportPlan(1000d, List.of(section)));
+		TransportPlan transportPlan = transportPlanRepo.save(new TransportPlan(1000d));
+		transportPlan.addSection(section);
 
 		long nonExistentTransportPlanId = transportPlan.getId() + 1;
 		int delay = 15;
@@ -87,7 +120,8 @@ public class TransportPlanRestControllerIntegrationTest {
 		webTestClient.post()
 				.uri(uriBuilder -> uriBuilder.path(API_TRANSPORTPLAN).path("/{transportPlanId}/delay")
 						.build(Long.toString(nonExistentTransportPlanId)))
-				.bodyValue(delayDto).exchange().expectStatus().isNotFound();
+				.headers(headers -> headers.setBearerAuth(jwt)).bodyValue(delayDto).exchange().expectStatus()
+				.isNotFound();
 		// Assert
 	}
 
@@ -101,7 +135,8 @@ public class TransportPlanRestControllerIntegrationTest {
 		Milestone endMilestone = milestoneRepo.save(new Milestone(endAddress, LocalDateTime.of(2025, 02, 13, 0, 0)));
 		Milestone otherMilestone = milestoneRepo.save(new Milestone(endAddress, LocalDateTime.of(2025, 02, 14, 0, 0)));
 		Section section = sectionRepo.save(new Section(startMilestone, endMilestone, 0));
-		TransportPlan transportPlan = transportPlanRepo.save(new TransportPlan(1000d, List.of(section)));
+		TransportPlan transportPlan = transportPlanRepo.save(new TransportPlan(1000d));
+		transportPlan.addSection(section);
 
 		long transportPlanId = transportPlan.getId();
 		int delay = 15;
@@ -110,7 +145,8 @@ public class TransportPlanRestControllerIntegrationTest {
 		webTestClient.post()
 				.uri(uriBuilder -> uriBuilder.path(API_TRANSPORTPLAN).path("/{transportPlanId}/delay")
 						.build(Long.toString(transportPlanId)))
-				.bodyValue(delayDto).exchange().expectStatus().isBadRequest();
+				.headers(headers -> headers.setBearerAuth(jwt)).bodyValue(delayDto).exchange().expectStatus()
+				.isBadRequest();
 		// Assert
 	}
 
@@ -124,8 +160,9 @@ public class TransportPlanRestControllerIntegrationTest {
 		LocalDateTime endMilestoneTime = LocalDateTime.of(2025, 02, 13, 0, 0);
 		Milestone endMilestone = milestoneRepo.save(new Milestone(endAddress, endMilestoneTime));
 		Section section = sectionRepo.save(new Section(startMilestone, endMilestone, 0));
-		TransportPlan transportPlan = transportPlanRepo.save(new TransportPlan(1000d, List.of(section)));
-
+		TransportPlan transportPlan = transportPlanRepo.save(new TransportPlan(1000d));
+		transportPlan.addSection(section);
+		transportPlanRepo.save(transportPlan);
 		long transportPlanId = transportPlan.getId();
 		int delay = 15;
 		DelayDto delayDto = new DelayDto(startMilestone.getId(), delay);
@@ -133,8 +170,8 @@ public class TransportPlanRestControllerIntegrationTest {
 		TransportPlan result = webTestClient.post()
 				.uri(uriBuilder -> uriBuilder.path(API_TRANSPORTPLAN).path("/{transportPlanId}/delay")
 						.build(Long.toString(transportPlanId)))
-				.bodyValue(delayDto).exchange().expectStatus().isOk().expectBody(TransportPlan.class).returnResult()
-				.getResponseBody();
+				.headers(headers -> headers.setBearerAuth(jwt)).bodyValue(delayDto).exchange().expectStatus().isOk()
+				.expectBody(TransportPlan.class).returnResult().getResponseBody();
 		// Assert
 		assertThat(result.getSections().get(0).getStartMilestone().getPlannedTime())
 				.isEqualToIgnoringNanos(startMilestoneTime.plusMinutes(delay));
@@ -152,8 +189,9 @@ public class TransportPlanRestControllerIntegrationTest {
 		LocalDateTime endMilestoneTime = LocalDateTime.of(2025, 02, 13, 0, 0);
 		Milestone endMilestone = milestoneRepo.save(new Milestone(endAddress, endMilestoneTime));
 		Section section = sectionRepo.save(new Section(startMilestone, endMilestone, 0));
-		TransportPlan transportPlan = transportPlanRepo.save(new TransportPlan(1000d, List.of(section)));
-
+		TransportPlan transportPlan = transportPlanRepo.save(new TransportPlan(1000d));
+		transportPlan.addSection(section);
+		transportPlanRepo.save(transportPlan);
 		long transportPlanId = transportPlan.getId();
 		int delay = 15;
 		DelayDto delayDto = new DelayDto(endMilestone.getId(), delay);
@@ -161,8 +199,8 @@ public class TransportPlanRestControllerIntegrationTest {
 		TransportPlan result = webTestClient.post()
 				.uri(uriBuilder -> uriBuilder.path(API_TRANSPORTPLAN).path("/{transportPlanId}/delay")
 						.build(Long.toString(transportPlanId)))
-				.bodyValue(delayDto).exchange().expectStatus().isOk().expectBody(TransportPlan.class).returnResult()
-				.getResponseBody();
+				.headers(headers -> headers.setBearerAuth(jwt)).bodyValue(delayDto).exchange().expectStatus().isOk()
+				.expectBody(TransportPlan.class).returnResult().getResponseBody();
 		// Assert
 		assertThat(result.getSections().get(0).getStartMilestone().getPlannedTime())
 				.isEqualToIgnoringNanos(startMilestoneTime);
@@ -189,8 +227,10 @@ public class TransportPlanRestControllerIntegrationTest {
 		Milestone endMilestone1 = milestoneRepo.save(new Milestone(endAddress1, endMilestoneTime1));
 		Section section1 = sectionRepo.save(new Section(startMilestone1, endMilestone1, 1));
 
-		TransportPlan transportPlan = transportPlanRepo.save(new TransportPlan(1000d, List.of(section0, section1)));
-
+		TransportPlan transportPlan = transportPlanRepo.save(new TransportPlan(1000d));
+		transportPlan.addSection(section0);
+		transportPlan.addSection(section1);
+		transportPlanRepo.save(transportPlan);
 		long transportPlanId = transportPlan.getId();
 		int delay = 15;
 		DelayDto delayDto = new DelayDto(endMilestone0.getId(), delay);
@@ -198,8 +238,8 @@ public class TransportPlanRestControllerIntegrationTest {
 		TransportPlan result = webTestClient.post()
 				.uri(uriBuilder -> uriBuilder.path(API_TRANSPORTPLAN).path("/{transportPlanId}/delay")
 						.build(Long.toString(transportPlanId)))
-				.bodyValue(delayDto).exchange().expectStatus().isOk().expectBody(TransportPlan.class).returnResult()
-				.getResponseBody();
+				.headers(headers -> headers.setBearerAuth(jwt)).bodyValue(delayDto).exchange().expectStatus().isOk()
+				.expectBody(TransportPlan.class).returnResult().getResponseBody();
 		// Assert
 		assertThat(result.getSections().get(0).getStartMilestone().getPlannedTime())
 				.isEqualToIgnoringNanos(startMilestoneTime0);
@@ -220,8 +260,9 @@ public class TransportPlanRestControllerIntegrationTest {
 		Milestone endMilestone = milestoneRepo.save(new Milestone(endAddress, endMilestoneTime));
 		Section section = sectionRepo.save(new Section(startMilestone, endMilestone, 0));
 		double expectedIncome = 1000d;
-		TransportPlan transportPlan = transportPlanRepo.save(new TransportPlan(expectedIncome, List.of(section)));
-
+		TransportPlan transportPlan = transportPlanRepo.save(new TransportPlan(expectedIncome));
+		transportPlan.addSection(section);
+		transportPlanRepo.save(transportPlan);
 		long transportPlanId = transportPlan.getId();
 		int delay = 29;
 		DelayDto delayDto = new DelayDto(startMilestone.getId(), delay);
@@ -229,8 +270,8 @@ public class TransportPlanRestControllerIntegrationTest {
 		TransportPlan result = webTestClient.post()
 				.uri(uriBuilder -> uriBuilder.path(API_TRANSPORTPLAN).path("/{transportPlanId}/delay")
 						.build(Long.toString(transportPlanId)))
-				.bodyValue(delayDto).exchange().expectStatus().isOk().expectBody(TransportPlan.class).returnResult()
-				.getResponseBody();
+				.headers(headers -> headers.setBearerAuth(jwt)).bodyValue(delayDto).exchange().expectStatus().isOk()
+				.expectBody(TransportPlan.class).returnResult().getResponseBody();
 		// Assert
 		assertThat(result.getExpectedIncome()).isEqualTo(expectedIncome);
 	}
@@ -246,8 +287,9 @@ public class TransportPlanRestControllerIntegrationTest {
 		Milestone endMilestone = milestoneRepo.save(new Milestone(endAddress, endMilestoneTime));
 		Section section = sectionRepo.save(new Section(startMilestone, endMilestone, 0));
 		double expectedIncome = 1000d;
-		TransportPlan transportPlan = transportPlanRepo.save(new TransportPlan(expectedIncome, List.of(section)));
-
+		TransportPlan transportPlan = transportPlanRepo.save(new TransportPlan(expectedIncome));
+		transportPlan.addSection(section);
+		transportPlanRepo.save(transportPlan);
 		long transportPlanId = transportPlan.getId();
 		int delay = 30;
 		DelayDto delayDto = new DelayDto(startMilestone.getId(), delay);
@@ -255,8 +297,8 @@ public class TransportPlanRestControllerIntegrationTest {
 		TransportPlan result = webTestClient.post()
 				.uri(uriBuilder -> uriBuilder.path(API_TRANSPORTPLAN).path("/{transportPlanId}/delay")
 						.build(Long.toString(transportPlanId)))
-				.bodyValue(delayDto).exchange().expectStatus().isOk().expectBody(TransportPlan.class).returnResult()
-				.getResponseBody();
+				.headers(headers -> headers.setBearerAuth(jwt)).bodyValue(delayDto).exchange().expectStatus().isOk()
+				.expectBody(TransportPlan.class).returnResult().getResponseBody();
 		// Assert
 		assertThat(result.getExpectedIncome()).isEqualTo(expectedIncome * 0.98);
 	}
@@ -272,8 +314,9 @@ public class TransportPlanRestControllerIntegrationTest {
 		Milestone endMilestone = milestoneRepo.save(new Milestone(endAddress, endMilestoneTime));
 		Section section = sectionRepo.save(new Section(startMilestone, endMilestone, 0));
 		double expectedIncome = 1000d;
-		TransportPlan transportPlan = transportPlanRepo.save(new TransportPlan(expectedIncome, List.of(section)));
-
+		TransportPlan transportPlan = transportPlanRepo.save(new TransportPlan(expectedIncome));
+		transportPlan.addSection(section);
+		transportPlanRepo.save(transportPlan);
 		long transportPlanId = transportPlan.getId();
 		int delay = 31;
 		DelayDto delayDto = new DelayDto(startMilestone.getId(), delay);
@@ -281,8 +324,8 @@ public class TransportPlanRestControllerIntegrationTest {
 		TransportPlan result = webTestClient.post()
 				.uri(uriBuilder -> uriBuilder.path(API_TRANSPORTPLAN).path("/{transportPlanId}/delay")
 						.build(Long.toString(transportPlanId)))
-				.bodyValue(delayDto).exchange().expectStatus().isOk().expectBody(TransportPlan.class).returnResult()
-				.getResponseBody();
+				.headers(headers -> headers.setBearerAuth(jwt)).bodyValue(delayDto).exchange().expectStatus().isOk()
+				.expectBody(TransportPlan.class).returnResult().getResponseBody();
 		// Assert
 		assertThat(result.getExpectedIncome()).isEqualTo(expectedIncome * 0.98);
 	}
@@ -298,8 +341,9 @@ public class TransportPlanRestControllerIntegrationTest {
 		Milestone endMilestone = milestoneRepo.save(new Milestone(endAddress, endMilestoneTime));
 		Section section = sectionRepo.save(new Section(startMilestone, endMilestone, 0));
 		double expectedIncome = 1000d;
-		TransportPlan transportPlan = transportPlanRepo.save(new TransportPlan(expectedIncome, List.of(section)));
-
+		TransportPlan transportPlan = transportPlanRepo.save(new TransportPlan(expectedIncome));
+		transportPlan.addSection(section);
+		transportPlanRepo.save(transportPlan);
 		long transportPlanId = transportPlan.getId();
 		int delay = 59;
 		DelayDto delayDto = new DelayDto(startMilestone.getId(), delay);
@@ -307,8 +351,8 @@ public class TransportPlanRestControllerIntegrationTest {
 		TransportPlan result = webTestClient.post()
 				.uri(uriBuilder -> uriBuilder.path(API_TRANSPORTPLAN).path("/{transportPlanId}/delay")
 						.build(Long.toString(transportPlanId)))
-				.bodyValue(delayDto).exchange().expectStatus().isOk().expectBody(TransportPlan.class).returnResult()
-				.getResponseBody();
+				.headers(headers -> headers.setBearerAuth(jwt)).bodyValue(delayDto).exchange().expectStatus().isOk()
+				.expectBody(TransportPlan.class).returnResult().getResponseBody();
 		// Assert
 		assertThat(result.getExpectedIncome()).isEqualTo(expectedIncome * 0.98);
 	}
@@ -324,8 +368,9 @@ public class TransportPlanRestControllerIntegrationTest {
 		Milestone endMilestone = milestoneRepo.save(new Milestone(endAddress, endMilestoneTime));
 		Section section = sectionRepo.save(new Section(startMilestone, endMilestone, 0));
 		double expectedIncome = 1000d;
-		TransportPlan transportPlan = transportPlanRepo.save(new TransportPlan(expectedIncome, List.of(section)));
-
+		TransportPlan transportPlan = transportPlanRepo.save(new TransportPlan(expectedIncome));
+		transportPlan.addSection(section);
+		transportPlanRepo.save(transportPlan);
 		long transportPlanId = transportPlan.getId();
 		int delay = 60;
 		DelayDto delayDto = new DelayDto(startMilestone.getId(), delay);
@@ -333,8 +378,8 @@ public class TransportPlanRestControllerIntegrationTest {
 		TransportPlan result = webTestClient.post()
 				.uri(uriBuilder -> uriBuilder.path(API_TRANSPORTPLAN).path("/{transportPlanId}/delay")
 						.build(Long.toString(transportPlanId)))
-				.bodyValue(delayDto).exchange().expectStatus().isOk().expectBody(TransportPlan.class).returnResult()
-				.getResponseBody();
+				.headers(headers -> headers.setBearerAuth(jwt)).bodyValue(delayDto).exchange().expectStatus().isOk()
+				.expectBody(TransportPlan.class).returnResult().getResponseBody();
 		// Assert
 		assertThat(result.getExpectedIncome()).isEqualTo(expectedIncome * 0.95);
 	}
@@ -350,8 +395,9 @@ public class TransportPlanRestControllerIntegrationTest {
 		Milestone endMilestone = milestoneRepo.save(new Milestone(endAddress, endMilestoneTime));
 		Section section = sectionRepo.save(new Section(startMilestone, endMilestone, 0));
 		double expectedIncome = 1000d;
-		TransportPlan transportPlan = transportPlanRepo.save(new TransportPlan(expectedIncome, List.of(section)));
-
+		TransportPlan transportPlan = transportPlanRepo.save(new TransportPlan(expectedIncome));
+		transportPlan.addSection(section);
+		transportPlanRepo.save(transportPlan);
 		long transportPlanId = transportPlan.getId();
 		int delay = 61;
 		DelayDto delayDto = new DelayDto(startMilestone.getId(), delay);
@@ -359,8 +405,8 @@ public class TransportPlanRestControllerIntegrationTest {
 		TransportPlan result = webTestClient.post()
 				.uri(uriBuilder -> uriBuilder.path(API_TRANSPORTPLAN).path("/{transportPlanId}/delay")
 						.build(Long.toString(transportPlanId)))
-				.bodyValue(delayDto).exchange().expectStatus().isOk().expectBody(TransportPlan.class).returnResult()
-				.getResponseBody();
+				.headers(headers -> headers.setBearerAuth(jwt)).bodyValue(delayDto).exchange().expectStatus().isOk()
+				.expectBody(TransportPlan.class).returnResult().getResponseBody();
 		// Assert
 		assertThat(result.getExpectedIncome()).isEqualTo(expectedIncome * 0.95);
 	}
@@ -376,8 +422,9 @@ public class TransportPlanRestControllerIntegrationTest {
 		Milestone endMilestone = milestoneRepo.save(new Milestone(endAddress, endMilestoneTime));
 		Section section = sectionRepo.save(new Section(startMilestone, endMilestone, 0));
 		double expectedIncome = 1000d;
-		TransportPlan transportPlan = transportPlanRepo.save(new TransportPlan(expectedIncome, List.of(section)));
-
+		TransportPlan transportPlan = transportPlanRepo.save(new TransportPlan(expectedIncome));
+		transportPlan.addSection(section);
+		transportPlanRepo.save(transportPlan);
 		long transportPlanId = transportPlan.getId();
 		int delay = 119;
 		DelayDto delayDto = new DelayDto(startMilestone.getId(), delay);
@@ -385,8 +432,8 @@ public class TransportPlanRestControllerIntegrationTest {
 		TransportPlan result = webTestClient.post()
 				.uri(uriBuilder -> uriBuilder.path(API_TRANSPORTPLAN).path("/{transportPlanId}/delay")
 						.build(Long.toString(transportPlanId)))
-				.bodyValue(delayDto).exchange().expectStatus().isOk().expectBody(TransportPlan.class).returnResult()
-				.getResponseBody();
+				.headers(headers -> headers.setBearerAuth(jwt)).bodyValue(delayDto).exchange().expectStatus().isOk()
+				.expectBody(TransportPlan.class).returnResult().getResponseBody();
 		// Assert
 		assertThat(result.getExpectedIncome()).isEqualTo(expectedIncome * 0.95);
 	}
@@ -402,8 +449,9 @@ public class TransportPlanRestControllerIntegrationTest {
 		Milestone endMilestone = milestoneRepo.save(new Milestone(endAddress, endMilestoneTime));
 		Section section = sectionRepo.save(new Section(startMilestone, endMilestone, 0));
 		double expectedIncome = 1000d;
-		TransportPlan transportPlan = transportPlanRepo.save(new TransportPlan(expectedIncome, List.of(section)));
-
+		TransportPlan transportPlan = transportPlanRepo.save(new TransportPlan(expectedIncome));
+		transportPlan.addSection(section);
+		transportPlanRepo.save(transportPlan);
 		long transportPlanId = transportPlan.getId();
 		int delay = 120;
 		DelayDto delayDto = new DelayDto(startMilestone.getId(), delay);
@@ -411,8 +459,8 @@ public class TransportPlanRestControllerIntegrationTest {
 		TransportPlan result = webTestClient.post()
 				.uri(uriBuilder -> uriBuilder.path(API_TRANSPORTPLAN).path("/{transportPlanId}/delay")
 						.build(Long.toString(transportPlanId)))
-				.bodyValue(delayDto).exchange().expectStatus().isOk().expectBody(TransportPlan.class).returnResult()
-				.getResponseBody();
+				.headers(headers -> headers.setBearerAuth(jwt)).bodyValue(delayDto).exchange().expectStatus().isOk()
+				.expectBody(TransportPlan.class).returnResult().getResponseBody();
 		// Assert
 		assertThat(result.getExpectedIncome()).isEqualTo(expectedIncome * 0.9);
 	}
@@ -428,8 +476,9 @@ public class TransportPlanRestControllerIntegrationTest {
 		Milestone endMilestone = milestoneRepo.save(new Milestone(endAddress, endMilestoneTime));
 		Section section = sectionRepo.save(new Section(startMilestone, endMilestone, 0));
 		double expectedIncome = 1000d;
-		TransportPlan transportPlan = transportPlanRepo.save(new TransportPlan(expectedIncome, List.of(section)));
-
+		TransportPlan transportPlan = transportPlanRepo.save(new TransportPlan(expectedIncome));
+		transportPlan.addSection(section);
+		transportPlanRepo.save(transportPlan);
 		long transportPlanId = transportPlan.getId();
 		int delay = 200;
 		DelayDto delayDto = new DelayDto(startMilestone.getId(), delay);
@@ -437,8 +486,8 @@ public class TransportPlanRestControllerIntegrationTest {
 		TransportPlan result = webTestClient.post()
 				.uri(uriBuilder -> uriBuilder.path(API_TRANSPORTPLAN).path("/{transportPlanId}/delay")
 						.build(Long.toString(transportPlanId)))
-				.bodyValue(delayDto).exchange().expectStatus().isOk().expectBody(TransportPlan.class).returnResult()
-				.getResponseBody();
+				.headers(headers -> headers.setBearerAuth(jwt)).bodyValue(delayDto).exchange().expectStatus().isOk()
+				.expectBody(TransportPlan.class).returnResult().getResponseBody();
 		// Assert
 		assertThat(result.getExpectedIncome()).isEqualTo(expectedIncome * 0.9);
 	}

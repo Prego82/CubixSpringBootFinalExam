@@ -1,5 +1,6 @@
 package hu.cubix.logistics.BalazsPeregi.model;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
@@ -16,14 +17,13 @@ public class TransportPlan {
 	private double expectedIncome;
 
 	@OneToMany
-	private List<Section> sections;
+	private List<Section> sections = new ArrayList<>();
 
 	public TransportPlan() {
 	}
 
-	public TransportPlan(double expectedIncome, List<Section> sections) {
+	public TransportPlan(double expectedIncome) {
 		this.expectedIncome = expectedIncome;
-		this.sections = sections;
 	}
 
 	public long getId() {
