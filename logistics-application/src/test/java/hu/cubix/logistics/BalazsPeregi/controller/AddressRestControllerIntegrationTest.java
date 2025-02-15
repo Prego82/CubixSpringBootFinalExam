@@ -605,7 +605,7 @@ class AddressRestControllerIntegrationTest {
 		webTestClient.put()
 				.uri(uriBuilder -> uriBuilder.path(API_ADDRESSES).path("/{id}").build(Long.toString(nonExistentId)))
 				.headers(headers -> headers.setBearerAuth(jwt)).bodyValue(modifiedAddress).exchange().expectStatus()
-				.isBadRequest();
+				.isNotFound();
 	}
 
 	@Test

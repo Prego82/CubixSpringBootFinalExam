@@ -46,8 +46,8 @@ public class TransportPlanRestControllerIntegrationTest {
 
 	@BeforeEach
 	void init() {
-		transportPlanRepo.deleteAll();
 		sectionRepo.deleteAll();
+		transportPlanRepo.deleteAll();
 		milestoneRepo.deleteAll();
 		addressRepo.deleteAll();
 
@@ -88,7 +88,8 @@ public class TransportPlanRestControllerIntegrationTest {
 		Section section = sectionRepo.save(new Section(startMilestone, endMilestone, 0));
 		TransportPlan transportPlan = transportPlanRepo.save(new TransportPlan(1000d));
 		transportPlan.addSection(section);
-
+		transportPlanRepo.save(transportPlan);
+		sectionRepo.save(section);
 		long nonExistentMilestoneId = Math.max(startMilestone.getId(), endMilestone.getId()) + 1;
 		int delay = 15;
 		DelayDto delayDto = new DelayDto(nonExistentMilestoneId, delay);
@@ -112,7 +113,8 @@ public class TransportPlanRestControllerIntegrationTest {
 		Section section = sectionRepo.save(new Section(startMilestone, endMilestone, 0));
 		TransportPlan transportPlan = transportPlanRepo.save(new TransportPlan(1000d));
 		transportPlan.addSection(section);
-
+		transportPlanRepo.save(transportPlan);
+		sectionRepo.save(section);
 		long nonExistentTransportPlanId = transportPlan.getId() + 1;
 		int delay = 15;
 		DelayDto delayDto = new DelayDto(endMilestone.getId(), delay);
@@ -137,7 +139,8 @@ public class TransportPlanRestControllerIntegrationTest {
 		Section section = sectionRepo.save(new Section(startMilestone, endMilestone, 0));
 		TransportPlan transportPlan = transportPlanRepo.save(new TransportPlan(1000d));
 		transportPlan.addSection(section);
-
+		transportPlanRepo.save(transportPlan);
+		sectionRepo.save(section);
 		long transportPlanId = transportPlan.getId();
 		int delay = 15;
 		DelayDto delayDto = new DelayDto(otherMilestone.getId(), delay);
@@ -163,6 +166,7 @@ public class TransportPlanRestControllerIntegrationTest {
 		TransportPlan transportPlan = transportPlanRepo.save(new TransportPlan(1000d));
 		transportPlan.addSection(section);
 		transportPlanRepo.save(transportPlan);
+		sectionRepo.save(section);
 		long transportPlanId = transportPlan.getId();
 		int delay = 15;
 		DelayDto delayDto = new DelayDto(startMilestone.getId(), delay);
@@ -176,6 +180,11 @@ public class TransportPlanRestControllerIntegrationTest {
 		assertThat(result.getSections().get(0).getStartMilestone().getPlannedTime())
 				.isEqualToIgnoringNanos(startMilestoneTime.plusMinutes(delay));
 		assertThat(result.getSections().get(0).getEndMilestone().getPlannedTime())
+				.isEqualToIgnoringNanos(endMilestoneTime.plusMinutes(delay));
+		TransportPlan savedTP = transportPlanRepo.findByIdWithFullData(transportPlanId).get();
+		assertThat(savedTP.getSections().get(0).getStartMilestone().getPlannedTime())
+				.isEqualToIgnoringNanos(startMilestoneTime.plusMinutes(delay));
+		assertThat(savedTP.getSections().get(0).getEndMilestone().getPlannedTime())
 				.isEqualToIgnoringNanos(endMilestoneTime.plusMinutes(delay));
 	}
 
@@ -192,6 +201,7 @@ public class TransportPlanRestControllerIntegrationTest {
 		TransportPlan transportPlan = transportPlanRepo.save(new TransportPlan(1000d));
 		transportPlan.addSection(section);
 		transportPlanRepo.save(transportPlan);
+		sectionRepo.save(section);
 		long transportPlanId = transportPlan.getId();
 		int delay = 15;
 		DelayDto delayDto = new DelayDto(endMilestone.getId(), delay);
@@ -205,6 +215,11 @@ public class TransportPlanRestControllerIntegrationTest {
 		assertThat(result.getSections().get(0).getStartMilestone().getPlannedTime())
 				.isEqualToIgnoringNanos(startMilestoneTime);
 		assertThat(result.getSections().get(0).getEndMilestone().getPlannedTime())
+				.isEqualToIgnoringNanos(endMilestoneTime.plusMinutes(delay));
+		TransportPlan savedTP = transportPlanRepo.findByIdWithFullData(transportPlanId).get();
+		assertThat(savedTP.getSections().get(0).getStartMilestone().getPlannedTime())
+				.isEqualToIgnoringNanos(startMilestoneTime);
+		assertThat(savedTP.getSections().get(0).getEndMilestone().getPlannedTime())
 				.isEqualToIgnoringNanos(endMilestoneTime.plusMinutes(delay));
 	}
 
@@ -231,6 +246,8 @@ public class TransportPlanRestControllerIntegrationTest {
 		transportPlan.addSection(section0);
 		transportPlan.addSection(section1);
 		transportPlanRepo.save(transportPlan);
+		sectionRepo.save(section0);
+		sectionRepo.save(section1);
 		long transportPlanId = transportPlan.getId();
 		int delay = 15;
 		DelayDto delayDto = new DelayDto(endMilestone0.getId(), delay);
@@ -246,6 +263,13 @@ public class TransportPlanRestControllerIntegrationTest {
 		assertThat(result.getSections().get(0).getEndMilestone().getPlannedTime())
 				.isEqualToIgnoringNanos(endMilestoneTime0.plusMinutes(delay));
 		assertThat(result.getSections().get(1).getStartMilestone().getPlannedTime())
+				.isEqualToIgnoringNanos(startMilestoneTime1.plusMinutes(delay));
+		TransportPlan savedTP = transportPlanRepo.findByIdWithFullData(transportPlanId).get();
+		assertThat(savedTP.getSections().get(0).getStartMilestone().getPlannedTime())
+				.isEqualToIgnoringNanos(startMilestoneTime0);
+		assertThat(savedTP.getSections().get(0).getEndMilestone().getPlannedTime())
+				.isEqualToIgnoringNanos(endMilestoneTime0.plusMinutes(delay));
+		assertThat(savedTP.getSections().get(1).getStartMilestone().getPlannedTime())
 				.isEqualToIgnoringNanos(startMilestoneTime1.plusMinutes(delay));
 	}
 
@@ -263,6 +287,7 @@ public class TransportPlanRestControllerIntegrationTest {
 		TransportPlan transportPlan = transportPlanRepo.save(new TransportPlan(expectedIncome));
 		transportPlan.addSection(section);
 		transportPlanRepo.save(transportPlan);
+		sectionRepo.save(section);
 		long transportPlanId = transportPlan.getId();
 		int delay = 29;
 		DelayDto delayDto = new DelayDto(startMilestone.getId(), delay);
@@ -274,6 +299,8 @@ public class TransportPlanRestControllerIntegrationTest {
 				.expectBody(TransportPlan.class).returnResult().getResponseBody();
 		// Assert
 		assertThat(result.getExpectedIncome()).isEqualTo(expectedIncome);
+		TransportPlan savedTP = transportPlanRepo.findByIdWithFullData(transportPlanId).get();
+		assertThat(savedTP.getExpectedIncome()).isEqualTo(expectedIncome);
 	}
 
 	@Test
@@ -290,6 +317,7 @@ public class TransportPlanRestControllerIntegrationTest {
 		TransportPlan transportPlan = transportPlanRepo.save(new TransportPlan(expectedIncome));
 		transportPlan.addSection(section);
 		transportPlanRepo.save(transportPlan);
+		sectionRepo.save(section);
 		long transportPlanId = transportPlan.getId();
 		int delay = 30;
 		DelayDto delayDto = new DelayDto(startMilestone.getId(), delay);
@@ -301,6 +329,8 @@ public class TransportPlanRestControllerIntegrationTest {
 				.expectBody(TransportPlan.class).returnResult().getResponseBody();
 		// Assert
 		assertThat(result.getExpectedIncome()).isEqualTo(expectedIncome * 0.98);
+		TransportPlan savedTP = transportPlanRepo.findByIdWithFullData(transportPlanId).get();
+		assertThat(savedTP.getExpectedIncome()).isEqualTo(expectedIncome * 0.98);
 	}
 
 	@Test
@@ -317,6 +347,7 @@ public class TransportPlanRestControllerIntegrationTest {
 		TransportPlan transportPlan = transportPlanRepo.save(new TransportPlan(expectedIncome));
 		transportPlan.addSection(section);
 		transportPlanRepo.save(transportPlan);
+		sectionRepo.save(section);
 		long transportPlanId = transportPlan.getId();
 		int delay = 31;
 		DelayDto delayDto = new DelayDto(startMilestone.getId(), delay);
@@ -328,6 +359,8 @@ public class TransportPlanRestControllerIntegrationTest {
 				.expectBody(TransportPlan.class).returnResult().getResponseBody();
 		// Assert
 		assertThat(result.getExpectedIncome()).isEqualTo(expectedIncome * 0.98);
+		TransportPlan savedTP = transportPlanRepo.findByIdWithFullData(transportPlanId).get();
+		assertThat(savedTP.getExpectedIncome()).isEqualTo(expectedIncome * 0.98);
 	}
 
 	@Test
@@ -344,6 +377,7 @@ public class TransportPlanRestControllerIntegrationTest {
 		TransportPlan transportPlan = transportPlanRepo.save(new TransportPlan(expectedIncome));
 		transportPlan.addSection(section);
 		transportPlanRepo.save(transportPlan);
+		sectionRepo.save(section);
 		long transportPlanId = transportPlan.getId();
 		int delay = 59;
 		DelayDto delayDto = new DelayDto(startMilestone.getId(), delay);
@@ -355,6 +389,8 @@ public class TransportPlanRestControllerIntegrationTest {
 				.expectBody(TransportPlan.class).returnResult().getResponseBody();
 		// Assert
 		assertThat(result.getExpectedIncome()).isEqualTo(expectedIncome * 0.98);
+		TransportPlan savedTP = transportPlanRepo.findByIdWithFullData(transportPlanId).get();
+		assertThat(savedTP.getExpectedIncome()).isEqualTo(expectedIncome * 0.98);
 	}
 
 	@Test
@@ -371,6 +407,7 @@ public class TransportPlanRestControllerIntegrationTest {
 		TransportPlan transportPlan = transportPlanRepo.save(new TransportPlan(expectedIncome));
 		transportPlan.addSection(section);
 		transportPlanRepo.save(transportPlan);
+		sectionRepo.save(section);
 		long transportPlanId = transportPlan.getId();
 		int delay = 60;
 		DelayDto delayDto = new DelayDto(startMilestone.getId(), delay);
@@ -382,6 +419,8 @@ public class TransportPlanRestControllerIntegrationTest {
 				.expectBody(TransportPlan.class).returnResult().getResponseBody();
 		// Assert
 		assertThat(result.getExpectedIncome()).isEqualTo(expectedIncome * 0.95);
+		TransportPlan savedTP = transportPlanRepo.findByIdWithFullData(transportPlanId).get();
+		assertThat(savedTP.getExpectedIncome()).isEqualTo(expectedIncome * 0.95);
 	}
 
 	@Test
@@ -398,6 +437,7 @@ public class TransportPlanRestControllerIntegrationTest {
 		TransportPlan transportPlan = transportPlanRepo.save(new TransportPlan(expectedIncome));
 		transportPlan.addSection(section);
 		transportPlanRepo.save(transportPlan);
+		sectionRepo.save(section);
 		long transportPlanId = transportPlan.getId();
 		int delay = 61;
 		DelayDto delayDto = new DelayDto(startMilestone.getId(), delay);
@@ -409,6 +449,8 @@ public class TransportPlanRestControllerIntegrationTest {
 				.expectBody(TransportPlan.class).returnResult().getResponseBody();
 		// Assert
 		assertThat(result.getExpectedIncome()).isEqualTo(expectedIncome * 0.95);
+		TransportPlan savedTP = transportPlanRepo.findByIdWithFullData(transportPlanId).get();
+		assertThat(savedTP.getExpectedIncome()).isEqualTo(expectedIncome * 0.95);
 	}
 
 	@Test
@@ -425,6 +467,7 @@ public class TransportPlanRestControllerIntegrationTest {
 		TransportPlan transportPlan = transportPlanRepo.save(new TransportPlan(expectedIncome));
 		transportPlan.addSection(section);
 		transportPlanRepo.save(transportPlan);
+		sectionRepo.save(section);
 		long transportPlanId = transportPlan.getId();
 		int delay = 119;
 		DelayDto delayDto = new DelayDto(startMilestone.getId(), delay);
@@ -436,6 +479,8 @@ public class TransportPlanRestControllerIntegrationTest {
 				.expectBody(TransportPlan.class).returnResult().getResponseBody();
 		// Assert
 		assertThat(result.getExpectedIncome()).isEqualTo(expectedIncome * 0.95);
+		TransportPlan savedTP = transportPlanRepo.findByIdWithFullData(transportPlanId).get();
+		assertThat(savedTP.getExpectedIncome()).isEqualTo(expectedIncome * 0.95);
 	}
 
 	@Test
@@ -452,6 +497,7 @@ public class TransportPlanRestControllerIntegrationTest {
 		TransportPlan transportPlan = transportPlanRepo.save(new TransportPlan(expectedIncome));
 		transportPlan.addSection(section);
 		transportPlanRepo.save(transportPlan);
+		sectionRepo.save(section);
 		long transportPlanId = transportPlan.getId();
 		int delay = 120;
 		DelayDto delayDto = new DelayDto(startMilestone.getId(), delay);
@@ -463,6 +509,8 @@ public class TransportPlanRestControllerIntegrationTest {
 				.expectBody(TransportPlan.class).returnResult().getResponseBody();
 		// Assert
 		assertThat(result.getExpectedIncome()).isEqualTo(expectedIncome * 0.9);
+		TransportPlan savedTP = transportPlanRepo.findByIdWithFullData(transportPlanId).get();
+		assertThat(savedTP.getExpectedIncome()).isEqualTo(expectedIncome * 0.9);
 	}
 
 	@Test
@@ -479,6 +527,7 @@ public class TransportPlanRestControllerIntegrationTest {
 		TransportPlan transportPlan = transportPlanRepo.save(new TransportPlan(expectedIncome));
 		transportPlan.addSection(section);
 		transportPlanRepo.save(transportPlan);
+		sectionRepo.save(section);
 		long transportPlanId = transportPlan.getId();
 		int delay = 200;
 		DelayDto delayDto = new DelayDto(startMilestone.getId(), delay);
@@ -490,5 +539,7 @@ public class TransportPlanRestControllerIntegrationTest {
 				.expectBody(TransportPlan.class).returnResult().getResponseBody();
 		// Assert
 		assertThat(result.getExpectedIncome()).isEqualTo(expectedIncome * 0.9);
+		TransportPlan savedTP = transportPlanRepo.findByIdWithFullData(transportPlanId).get();
+		assertThat(savedTP.getExpectedIncome()).isEqualTo(expectedIncome * 0.9);
 	}
 }

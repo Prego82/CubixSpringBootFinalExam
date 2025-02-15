@@ -70,7 +70,7 @@ public class AddressRestController {
 		}
 		Address updated = addressService.update(addressMapper.dtoToAddress(updatedAddress));
 		if (updated == null) {
-			return ResponseEntity.badRequest().build();
+			return ResponseEntity.notFound().build();
 		} else {
 			return ResponseEntity.ok(addressMapper.addressToDto(updated));
 		}

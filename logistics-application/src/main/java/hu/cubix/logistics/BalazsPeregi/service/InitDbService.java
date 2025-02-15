@@ -27,8 +27,8 @@ public class InitDbService {
 	TransportPlanRepository transportPlanRepo;
 
 	public void clearDb() {
-		transportPlanRepo.deleteAll();
 		sectionRepo.deleteAll();
+		transportPlanRepo.deleteAll();
 		milestoneRepo.deleteAll();
 		addressRepo.deleteAll();
 	}

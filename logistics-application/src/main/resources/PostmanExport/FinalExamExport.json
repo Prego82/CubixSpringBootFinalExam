@@ -1,1 +1,910 @@
-{"openapi":"3.0.1","info":{"title":"OpenAPI definition","version":"v0"},"servers":[{"url":"http://localhost:8080","description":"Generated server url"}],"paths":{"/api/addresses/{id}":{"get":{"tags":["address-rest-controller"],"operationId":"findById","parameters":[{"name":"id","in":"path","required":true,"schema":{"type":"integer","format":"int64"}}],"responses":{"200":{"description":"OK","content":{"*/*":{"schema":{"$ref":"#/components/schemas/AddressDto"}}}}}},"put":{"tags":["address-rest-controller"],"operationId":"update","parameters":[{"name":"id","in":"path","required":true,"schema":{"type":"integer","format":"int64"}}],"requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/AddressDto"}}},"required":true},"responses":{"200":{"description":"OK","content":{"*/*":{"schema":{"$ref":"#/components/schemas/AddressDto"}}}}}},"delete":{"tags":["address-rest-controller"],"operationId":"deleteById","parameters":[{"name":"id","in":"path","required":true,"schema":{"type":"integer","format":"int64"}}],"responses":{"200":{"description":"OK"}}}},"/api/transportPlans/{transportPlanId}/delay":{"post":{"tags":["transport-plan-controller"],"operationId":"registerDelay","parameters":[{"name":"transportPlanId","in":"path","required":true,"schema":{"type":"integer","format":"int64"}}],"requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/DelayDto"}}},"required":true},"responses":{"200":{"description":"OK","content":{"*/*":{"schema":{"$ref":"#/components/schemas/TransportPlanDto"}}}}}}},"/api/login":{"post":{"tags":["login-controller"],"operationId":"login","requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/LoginDto"}}},"required":true},"responses":{"200":{"description":"OK","content":{"*/*":{"schema":{"type":"string"}}}}}}},"/api/addresses":{"get":{"tags":["address-rest-controller"],"operationId":"findAll","responses":{"200":{"description":"OK","content":{"*/*":{"schema":{"type":"array","items":{"$ref":"#/components/schemas/AddressDto"}}}}}}},"post":{"tags":["address-rest-controller"],"operationId":"addAddress","requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/AddressDto"}}},"required":true},"responses":{"200":{"description":"OK","content":{"*/*":{"schema":{"$ref":"#/components/schemas/AddressDto"}}}}}}},"/api/addresses/search":{"post":{"tags":["address-rest-controller"],"operationId":"search","parameters":[{"name":"pageable","in":"query","required":true,"schema":{"$ref":"#/components/schemas/Pageable"}}],"requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/AddressDto"}}},"required":true},"responses":{"200":{"description":"OK","content":{"*/*":{"schema":{"type":"array","items":{"$ref":"#/components/schemas/AddressDto"}}}}}}}},"/init":{"get":{"tags":["inti-db-rest-controller"],"operationId":"insertTestData","responses":{"200":{"description":"OK"}}}},"/clear":{"get":{"tags":["inti-db-rest-controller"],"operationId":"clearDb","responses":{"200":{"description":"OK"}}}}},"components":{"schemas":{"AddressDto":{"required":["city","country","houseNumber","street","zip"],"type":"object","properties":{"id":{"type":"integer","format":"int64"},"country":{"pattern":"^[A-Z]{2}$","type":"string"},"city":{"type":"string"},"street":{"type":"string"},"zip":{"type":"string"},"houseNumber":{"type":"string"},"latitude":{"type":"number","format":"double"},"longitude":{"type":"number","format":"double"}}},"DelayDto":{"type":"object","properties":{"milestoneId":{"type":"integer","format":"int64"},"delayInMinutes":{"type":"integer","format":"int32"}}},"MilestoneDto":{"type":"object","properties":{"id":{"type":"integer","format":"int64"},"address":{"$ref":"#/components/schemas/AddressDto"},"plannedTime":{"type":"string","format":"date-time"}}},"SectionDto":{"type":"object","properties":{"id":{"type":"integer","format":"int64"},"startMilestone":{"$ref":"#/components/schemas/MilestoneDto"},"endMilestone":{"$ref":"#/components/schemas/MilestoneDto"},"orderNr":{"type":"integer","format":"int32"}}},"TransportPlanDto":{"type":"object","properties":{"id":{"type":"integer","format":"int64"},"expectedIncome":{"type":"integer","format":"int32"},"sections":{"type":"array","items":{"$ref":"#/components/schemas/SectionDto"}}}},"LoginDto":{"type":"object","properties":{"username":{"type":"string"},"password":{"type":"string"}}},"Pageable":{"type":"object","properties":{"page":{"minimum":0,"type":"integer","format":"int32"},"size":{"minimum":1,"type":"integer","format":"int32"},"sort":{"type":"array","items":{"type":"string"}}}}}}}
+{
+	"info": {
+		"_postman_id": "f7a6bd16-ecb8-4e76-9dba-e23531ad0d1b",
+		"name": "OpenAPI definition",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "26205700"
+	},
+	"item": [
+		{
+			"name": "api",
+			"item": [
+				{
+					"name": "addresses",
+					"item": [
+						{
+							"name": "{id}",
+							"item": [
+								{
+									"name": "find By Id",
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZGRyZXNzTWFuYWdlciIsImF1dGgiOlsiQWRkcmVzc01hbmFnZXIiXSwiZXhwIjoxNzM5NTc4NDYwfQ.EM8EpM3Y3O1N1FDq1ri5BRPUeJohIVK6QhpfZq7ckFI",
+													"type": "string"
+												}
+											]
+										},
+										"method": "GET",
+										"header": [
+											{
+												"key": "Accept",
+												"value": "*/*"
+											}
+										],
+										"url": {
+											"raw": "{{baseUrl}}/api/addresses/:id",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"api",
+												"addresses",
+												":id"
+											],
+											"variable": [
+												{
+													"key": "id",
+													"value": "207",
+													"description": "(Required) "
+												}
+											]
+										}
+									},
+									"response": [
+										{
+											"name": "OK",
+											"originalRequest": {
+												"method": "GET",
+												"header": [
+													{
+														"key": "Accept",
+														"value": "*/*"
+													}
+												],
+												"url": {
+													"raw": "{{baseUrl}}/api/addresses/:id",
+													"host": [
+														"{{baseUrl}}"
+													],
+													"path": [
+														"api",
+														"addresses",
+														":id"
+													],
+													"variable": [
+														{
+															"key": "id"
+														}
+													]
+												}
+											},
+											"status": "OK",
+											"code": 200,
+											"_postman_previewlanguage": "text",
+											"header": [
+												{
+													"key": "Content-Type",
+													"value": "*/*"
+												}
+											],
+											"cookie": [],
+											"body": "{\n  \"city\": \"<string>\",\n  \"country\": \"YM\",\n  \"houseNumber\": \"<string>\",\n  \"street\": \"<string>\",\n  \"zip\": \"<string>\",\n  \"id\": \"<long>\",\n  \"latitude\": \"<double>\",\n  \"longitude\": \"<double>\"\n}"
+										}
+									]
+								},
+								{
+									"name": "update",
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZGRyZXNzTWFuYWdlciIsImF1dGgiOlsiQWRkcmVzc01hbmFnZXIiXSwiZXhwIjoxNzM5NTc5MjY4fQ.XjkYbqozHyxM4djnd-KpXUaC-dWXkzHCUOewM0tqq2s",
+													"type": "string"
+												}
+											]
+										},
+										"method": "PUT",
+										"header": [
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											},
+											{
+												"key": "Accept",
+												"value": "*/*"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"city\": \"Budapest\",\n  \"country\": \"HU\",\n  \"houseNumber\": \"666\",\n  \"street\": \"Hatodik utca\",\n  \"zip\": \"666\",\n  \"id\": \"207\",\n  \"latitude\": \"6\",\n  \"longitude\": \"6\"\n}",
+											"options": {
+												"raw": {
+													"headerFamily": "json",
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{baseUrl}}/api/addresses/:id",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"api",
+												"addresses",
+												":id"
+											],
+											"variable": [
+												{
+													"key": "id",
+													"value": "207",
+													"description": "(Required) "
+												}
+											]
+										}
+									},
+									"response": [
+										{
+											"name": "OK",
+											"originalRequest": {
+												"method": "PUT",
+												"header": [
+													{
+														"key": "Content-Type",
+														"value": "application/json"
+													},
+													{
+														"key": "Accept",
+														"value": "*/*"
+													}
+												],
+												"body": {
+													"mode": "raw",
+													"raw": "{\n  \"city\": \"<string>\",\n  \"country\": \"YM\",\n  \"houseNumber\": \"<string>\",\n  \"street\": \"<string>\",\n  \"zip\": \"<string>\",\n  \"id\": \"<long>\",\n  \"latitude\": \"<double>\",\n  \"longitude\": \"<double>\"\n}",
+													"options": {
+														"raw": {
+															"headerFamily": "json",
+															"language": "json"
+														}
+													}
+												},
+												"url": {
+													"raw": "{{baseUrl}}/api/addresses/:id",
+													"host": [
+														"{{baseUrl}}"
+													],
+													"path": [
+														"api",
+														"addresses",
+														":id"
+													],
+													"variable": [
+														{
+															"key": "id"
+														}
+													]
+												}
+											},
+											"status": "OK",
+											"code": 200,
+											"_postman_previewlanguage": "text",
+											"header": [
+												{
+													"key": "Content-Type",
+													"value": "*/*"
+												}
+											],
+											"cookie": [],
+											"body": "{\n  \"city\": \"<string>\",\n  \"country\": \"YM\",\n  \"houseNumber\": \"<string>\",\n  \"street\": \"<string>\",\n  \"zip\": \"<string>\",\n  \"id\": \"<long>\",\n  \"latitude\": \"<double>\",\n  \"longitude\": \"<double>\"\n}"
+										}
+									]
+								},
+								{
+									"name": "delete By Id",
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZGRyZXNzTWFuYWdlciIsImF1dGgiOlsiQWRkcmVzc01hbmFnZXIiXSwiZXhwIjoxNzM5NTc5MjY4fQ.XjkYbqozHyxM4djnd-KpXUaC-dWXkzHCUOewM0tqq2s",
+													"type": "string"
+												}
+											]
+										},
+										"method": "DELETE",
+										"header": [],
+										"url": {
+											"raw": "{{baseUrl}}/api/addresses/:id",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"api",
+												"addresses",
+												":id"
+											],
+											"variable": [
+												{
+													"key": "id",
+													"value": "206"
+												}
+											]
+										}
+									},
+									"response": [
+										{
+											"name": "OK",
+											"originalRequest": {
+												"method": "DELETE",
+												"header": [],
+												"url": {
+													"raw": "{{baseUrl}}/api/addresses/:id",
+													"host": [
+														"{{baseUrl}}"
+													],
+													"path": [
+														"api",
+														"addresses",
+														":id"
+													],
+													"variable": [
+														{
+															"key": "id"
+														}
+													]
+												}
+											},
+											"status": "OK",
+											"code": 200,
+											"_postman_previewlanguage": "text",
+											"header": [],
+											"cookie": [],
+											"body": ""
+										}
+									]
+								}
+							]
+						},
+						{
+							"name": "search",
+							"item": [
+								{
+									"name": "search",
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZGRyZXNzTWFuYWdlciIsImF1dGgiOlsiQWRkcmVzc01hbmFnZXIiXSwiZXhwIjoxNzM5NTc5OTI1fQ.pF0r64P93q8xCnh33slrX-_vSDlq6uoEW0ML86mHKNA",
+													"type": "string"
+												}
+											]
+										},
+										"method": "POST",
+										"header": [
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											},
+											{
+												"key": "Accept",
+												"value": "*/*"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"city\": \"<string>\",\n  \"country\": \"YM\",\n  \"houseNumber\": \"<string>\",\n  \"street\": \"<string>\",\n  \"zip\": \"<string>\",\n  \"latitude\": \"<double>\",\n  \"longitude\": \"<double>\"\n}",
+											"options": {
+												"raw": {
+													"headerFamily": "json",
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{baseUrl}}/api/addresses/search?page=1&size=2&sort=id,desc",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"api",
+												"addresses",
+												"search"
+											],
+											"query": [
+												{
+													"key": "page",
+													"value": "1",
+													"description": "(Required) "
+												},
+												{
+													"key": "size",
+													"value": "2",
+													"description": "(Required) "
+												},
+												{
+													"key": "sort",
+													"value": "id,desc",
+													"description": "(Required) "
+												}
+											]
+										}
+									},
+									"response": [
+										{
+											"name": "OK",
+											"originalRequest": {
+												"method": "POST",
+												"header": [
+													{
+														"key": "Content-Type",
+														"value": "application/json"
+													},
+													{
+														"key": "Accept",
+														"value": "*/*"
+													}
+												],
+												"body": {
+													"mode": "raw",
+													"raw": "{\n  \"city\": \"<string>\",\n  \"country\": \"YM\",\n  \"houseNumber\": \"<string>\",\n  \"street\": \"<string>\",\n  \"zip\": \"<string>\",\n  \"id\": \"<long>\",\n  \"latitude\": \"<double>\",\n  \"longitude\": \"<double>\"\n}",
+													"options": {
+														"raw": {
+															"headerFamily": "json",
+															"language": "json"
+														}
+													}
+												},
+												"url": {
+													"raw": "{{baseUrl}}/api/addresses/search?page=<integer>&size=<integer>&sort=<string>,<string>",
+													"host": [
+														"{{baseUrl}}"
+													],
+													"path": [
+														"api",
+														"addresses",
+														"search"
+													],
+													"query": [
+														{
+															"key": "page",
+															"value": "<integer>",
+															"description": "(Required) "
+														},
+														{
+															"key": "size",
+															"value": "<integer>",
+															"description": "(Required) "
+														},
+														{
+															"key": "sort",
+															"value": "<string>,<string>",
+															"description": "(Required) "
+														}
+													]
+												}
+											},
+											"status": "OK",
+											"code": 200,
+											"_postman_previewlanguage": "text",
+											"header": [
+												{
+													"key": "Content-Type",
+													"value": "*/*"
+												}
+											],
+											"cookie": [],
+											"body": "[\n  {\n    \"city\": \"<string>\",\n    \"country\": \"IF\",\n    \"houseNumber\": \"<string>\",\n    \"street\": \"<string>\",\n    \"zip\": \"<string>\",\n    \"id\": \"<long>\",\n    \"latitude\": \"<double>\",\n    \"longitude\": \"<double>\"\n  },\n  {\n    \"city\": \"<string>\",\n    \"country\": \"IZ\",\n    \"houseNumber\": \"<string>\",\n    \"street\": \"<string>\",\n    \"zip\": \"<string>\",\n    \"id\": \"<long>\",\n    \"latitude\": \"<double>\",\n    \"longitude\": \"<double>\"\n  }\n]"
+										}
+									]
+								}
+							]
+						},
+						{
+							"name": "find All",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZGRyZXNzTWFuYWdlciIsImF1dGgiOlsiQWRkcmVzc01hbmFnZXIiXSwiZXhwIjoxNzM5NTc4NDYwfQ.EM8EpM3Y3O1N1FDq1ri5BRPUeJohIVK6QhpfZq7ckFI",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "*/*"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/api/addresses",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"addresses"
+									]
+								}
+							},
+							"response": [
+								{
+									"name": "OK",
+									"originalRequest": {
+										"method": "GET",
+										"header": [
+											{
+												"key": "Accept",
+												"value": "*/*"
+											}
+										],
+										"url": {
+											"raw": "{{baseUrl}}/api/addresses",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"api",
+												"addresses"
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "text",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "*/*"
+										}
+									],
+									"cookie": [],
+									"body": "[\n  {\n    \"city\": \"<string>\",\n    \"country\": \"IF\",\n    \"houseNumber\": \"<string>\",\n    \"street\": \"<string>\",\n    \"zip\": \"<string>\",\n    \"id\": \"<long>\",\n    \"latitude\": \"<double>\",\n    \"longitude\": \"<double>\"\n  },\n  {\n    \"city\": \"<string>\",\n    \"country\": \"IZ\",\n    \"houseNumber\": \"<string>\",\n    \"street\": \"<string>\",\n    \"zip\": \"<string>\",\n    \"id\": \"<long>\",\n    \"latitude\": \"<double>\",\n    \"longitude\": \"<double>\"\n  }\n]"
+								}
+							]
+						},
+						{
+							"name": "add Address",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZGRyZXNzTWFuYWdlciIsImF1dGgiOlsiQWRkcmVzc01hbmFnZXIiXSwiZXhwIjoxNzM5NTc5MjY4fQ.XjkYbqozHyxM4djnd-KpXUaC-dWXkzHCUOewM0tqq2s",
+											"type": "string"
+										}
+									]
+								},
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "Accept",
+										"value": "*/*"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"city\": \"Miskolc\",\n  \"country\": \"YH\",\n  \"houseNumber\": \"5\",\n  \"street\": \"Otodik utca\",\n  \"zip\": \"5555\",\n  \"latitude\": \"4\",\n  \"longitude\": \"4\"\n}",
+									"options": {
+										"raw": {
+											"headerFamily": "json",
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{baseUrl}}/api/addresses",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"addresses"
+									]
+								}
+							},
+							"response": [
+								{
+									"name": "OK",
+									"originalRequest": {
+										"method": "POST",
+										"header": [
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											},
+											{
+												"key": "Accept",
+												"value": "*/*"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"city\": \"<string>\",\n  \"country\": \"YM\",\n  \"houseNumber\": \"<string>\",\n  \"street\": \"<string>\",\n  \"zip\": \"<string>\",\n  \"id\": \"<long>\",\n  \"latitude\": \"<double>\",\n  \"longitude\": \"<double>\"\n}",
+											"options": {
+												"raw": {
+													"headerFamily": "json",
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{baseUrl}}/api/addresses",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"api",
+												"addresses"
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "text",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "*/*"
+										}
+									],
+									"cookie": [],
+									"body": "{\n  \"city\": \"<string>\",\n  \"country\": \"YM\",\n  \"houseNumber\": \"<string>\",\n  \"street\": \"<string>\",\n  \"zip\": \"<string>\",\n  \"id\": \"<long>\",\n  \"latitude\": \"<double>\",\n  \"longitude\": \"<double>\"\n}"
+								}
+							]
+						}
+					]
+				},
+				{
+					"name": "transportPlans",
+					"item": [
+						{
+							"name": "{transportPlanId}",
+							"item": [
+								{
+									"name": "delay",
+									"item": [
+										{
+											"name": "register Delay",
+											"request": {
+												"auth": {
+													"type": "bearer",
+													"bearer": [
+														{
+															"key": "token",
+															"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0cmFuc3BvcnRNYW5hZ2VyIiwiYXV0aCI6WyJUcmFuc3BvcnRNYW5hZ2VyIl0sImV4cCI6MTczOTU4MDMzN30.qJmBfF1JpSK1ENU7UST4kwbO1v2yW7utZ2aSVvWtgRk",
+															"type": "string"
+														}
+													]
+												},
+												"method": "POST",
+												"header": [
+													{
+														"key": "Content-Type",
+														"value": "application/json"
+													},
+													{
+														"key": "Accept",
+														"value": "*/*"
+													}
+												],
+												"body": {
+													"mode": "raw",
+													"raw": "{\n  \"milestoneId\": \"203\",\n  \"delayInMinutes\": \"121\"\n}",
+													"options": {
+														"raw": {
+															"headerFamily": "json",
+															"language": "json"
+														}
+													}
+												},
+												"url": {
+													"raw": "{{baseUrl}}/api/transportPlans/:transportPlanId/delay",
+													"host": [
+														"{{baseUrl}}"
+													],
+													"path": [
+														"api",
+														"transportPlans",
+														":transportPlanId",
+														"delay"
+													],
+													"variable": [
+														{
+															"key": "transportPlanId",
+															"value": "202",
+															"description": "(Required) "
+														}
+													]
+												}
+											},
+											"response": [
+												{
+													"name": "OK",
+													"originalRequest": {
+														"method": "POST",
+														"header": [
+															{
+																"key": "Content-Type",
+																"value": "application/json"
+															},
+															{
+																"key": "Accept",
+																"value": "*/*"
+															}
+														],
+														"body": {
+															"mode": "raw",
+															"raw": "{\n  \"milestoneId\": \"<long>\",\n  \"delayInMinutes\": \"<integer>\"\n}",
+															"options": {
+																"raw": {
+																	"headerFamily": "json",
+																	"language": "json"
+																}
+															}
+														},
+														"url": {
+															"raw": "{{baseUrl}}/api/transportPlans/:transportPlanId/delay",
+															"host": [
+																"{{baseUrl}}"
+															],
+															"path": [
+																"api",
+																"transportPlans",
+																":transportPlanId",
+																"delay"
+															],
+															"variable": [
+																{
+																	"key": "transportPlanId"
+																}
+															]
+														}
+													},
+													"status": "OK",
+													"code": 200,
+													"_postman_previewlanguage": "text",
+													"header": [
+														{
+															"key": "Content-Type",
+															"value": "*/*"
+														}
+													],
+													"cookie": [],
+													"body": "{\n  \"id\": \"<long>\",\n  \"expectedIncome\": \"<integer>\",\n  \"sections\": [\n    {\n      \"id\": \"<long>\",\n      \"startMilestone\": {\n        \"id\": \"<long>\",\n        \"address\": {\n          \"city\": \"<string>\",\n          \"country\": \"WC\",\n          \"houseNumber\": \"<string>\",\n          \"street\": \"<string>\",\n          \"zip\": \"<string>\",\n          \"id\": \"<long>\",\n          \"latitude\": \"<double>\",\n          \"longitude\": \"<double>\"\n        },\n        \"plannedTime\": \"<dateTime>\"\n      },\n      \"endMilestone\": {\n        \"id\": \"<long>\",\n        \"address\": {\n          \"city\": \"<string>\",\n          \"country\": \"GH\",\n          \"houseNumber\": \"<string>\",\n          \"street\": \"<string>\",\n          \"zip\": \"<string>\",\n          \"id\": \"<long>\",\n          \"latitude\": \"<double>\",\n          \"longitude\": \"<double>\"\n        },\n        \"plannedTime\": \"<dateTime>\"\n      },\n      \"orderNr\": \"<integer>\"\n    },\n    {\n      \"id\": \"<long>\",\n      \"startMilestone\": {\n        \"id\": \"<long>\",\n        \"address\": {\n          \"city\": \"<string>\",\n          \"country\": \"FR\",\n          \"houseNumber\": \"<string>\",\n          \"street\": \"<string>\",\n          \"zip\": \"<string>\",\n          \"id\": \"<long>\",\n          \"latitude\": \"<double>\",\n          \"longitude\": \"<double>\"\n        },\n        \"plannedTime\": \"<dateTime>\"\n      },\n      \"endMilestone\": {\n        \"id\": \"<long>\",\n        \"address\": {\n          \"city\": \"<string>\",\n          \"country\": \"GZ\",\n          \"houseNumber\": \"<string>\",\n          \"street\": \"<string>\",\n          \"zip\": \"<string>\",\n          \"id\": \"<long>\",\n          \"latitude\": \"<double>\",\n          \"longitude\": \"<double>\"\n        },\n        \"plannedTime\": \"<dateTime>\"\n      },\n      \"orderNr\": \"<integer>\"\n    }\n  ]\n}"
+												}
+											]
+										}
+									]
+								}
+							]
+						}
+					]
+				},
+				{
+					"name": "login",
+					"item": [
+						{
+							"name": "login",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "Accept",
+										"value": "*/*"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"username\": \"TransportManager\",\n  \"password\": \"pass\"\n}",
+									"options": {
+										"raw": {
+											"headerFamily": "json",
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{baseUrl}}/api/login",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"login"
+									]
+								}
+							},
+							"response": [
+								{
+									"name": "OK",
+									"originalRequest": {
+										"method": "POST",
+										"header": [
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											},
+											{
+												"key": "Accept",
+												"value": "*/*"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"username\": \"<string>\",\n  \"password\": \"<string>\"\n}",
+											"options": {
+												"raw": {
+													"headerFamily": "json",
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{baseUrl}}/api/login",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"api",
+												"login"
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "text",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "*/*"
+										}
+									],
+									"cookie": [],
+									"body": "<string>"
+								}
+							]
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "init",
+			"item": [
+				{
+					"name": "insert Test Data",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZGRyZXNzTWFuYWdlciIsImF1dGgiOlsiQWRkcmVzc01hbmFnZXIiXSwiZXhwIjoxNzM5NTc4NDYwfQ.EM8EpM3Y3O1N1FDq1ri5BRPUeJohIVK6QhpfZq7ckFI",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/init",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"init"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "OK",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/init",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"init"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "text",
+							"header": [],
+							"cookie": [],
+							"body": ""
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "clear",
+			"item": [
+				{
+					"name": "clear Db",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZGRyZXNzTWFuYWdlciIsImF1dGgiOlsiQWRkcmVzc01hbmFnZXIiXSwiZXhwIjoxNzM5NTc4NDYwfQ.EM8EpM3Y3O1N1FDq1ri5BRPUeJohIVK6QhpfZq7ckFI",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/clear",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"clear"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "OK",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/clear",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"clear"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "text",
+							"header": [],
+							"cookie": [],
+							"body": ""
+						}
+					]
+				}
+			]
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:8080"
+		}
+	]
+}
