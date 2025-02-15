@@ -7,8 +7,17 @@ import java.util.Objects;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
+import jakarta.persistence.NamedAttributeNode;
+import jakarta.persistence.NamedEntityGraph;
+import jakarta.persistence.NamedSubgraph;
 import jakarta.persistence.OneToMany;
 
+@NamedEntityGraph(name = "TransportPlan.Full", attributeNodes = {
+		@NamedAttributeNode(value = "sections", subgraph = "sectionsGraph") }, subgraphs = {
+				@NamedSubgraph(name = "sectionsGraph", attributeNodes = {
+						@NamedAttributeNode(value = "startMilestone", subgraph = "milestoneGraph"),
+						@NamedAttributeNode(value = "endMilestone", subgraph = "milestoneGraph") }),
+				@NamedSubgraph(name = "milestoneGraph", attributeNodes = { @NamedAttributeNode("address") }) })
 @Entity
 public class TransportPlan {
 	@Id
@@ -16,7 +25,7 @@ public class TransportPlan {
 	private long id;
 	private double expectedIncome;
 
-	@OneToMany
+	@OneToMany(mappedBy = "transportPlan")
 	private List<Section> sections = new ArrayList<>();
 
 	public TransportPlan() {
@@ -24,6 +33,12 @@ public class TransportPlan {
 
 	public TransportPlan(double expectedIncome) {
 		this.expectedIncome = expectedIncome;
+	}
+
+	public void addSection(Section section) {
+		this.sections.add(section);
+		section.setTransportPlan(this);
+		section.setOrderNr(this.sections.size() - 1);
 	}
 
 	public long getId() {
@@ -48,12 +63,6 @@ public class TransportPlan {
 
 	public void setSections(List<Section> sections) {
 		this.sections = sections;
-	}
-
-	public void addSection(Section section) {
-		this.sections.add(section);
-		section.setTransportPlan(this);
-		section.setOrderNr(this.sections.size() - 1);
 	}
 
 	@Override

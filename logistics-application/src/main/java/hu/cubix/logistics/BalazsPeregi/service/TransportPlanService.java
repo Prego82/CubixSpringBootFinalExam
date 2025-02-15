@@ -10,7 +10,6 @@ import org.springframework.web.server.ResponseStatusException;
 
 import hu.cubix.logistics.BalazsPeregi.config.DelayCosts;
 import hu.cubix.logistics.BalazsPeregi.config.DelayCosts.Decrease;
-import hu.cubix.logistics.BalazsPeregi.model.Milestone;
 import hu.cubix.logistics.BalazsPeregi.model.Section;
 import hu.cubix.logistics.BalazsPeregi.model.TransportPlan;
 import hu.cubix.logistics.BalazsPeregi.repository.MilestoneRepository;
@@ -31,31 +30,20 @@ public class TransportPlanService {
 
 	@Transactional
 	public TransportPlan addDelay(long transportPlanId, long milestoneId, int delay) {
-		TransportPlan transportPlan = transportPlanRepo.findById(transportPlanId)
+		TransportPlan transportPlan = transportPlanRepo.findByIdWithFullData(transportPlanId)
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-		Milestone milestone = milestoneRepo.findById(milestoneId)
-				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+		if (!milestoneRepo.existsById(milestoneId)) {
+			throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+		}
 
 		List<Section> sections = transportPlan.getSections().stream().sorted(Comparator.comparing(Section::getOrderNr))
 				.toList();
-		Section selectedSection = null;
-		boolean isStartMilestone = false;
-		int i = 0;
-		for (Section section : sections) {
-			if (section.getStartMilestone().equals(milestone)) {
-				selectedSection = section;
-				isStartMilestone = true;
-				break;
-			}
-			if (section.getEndMilestone().equals(milestone)) {
-				selectedSection = section;
-				isStartMilestone = false;
-				break;
-			}
-		}
-		if (selectedSection == null) {
-			throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
-		}
+		Section selectedSection = sections.stream()
+				.filter(section -> section.getStartMilestone().getId() == milestoneId
+						|| section.getEndMilestone().getId() == milestoneId)
+				.findFirst().orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST));
+
+		boolean isStartMilestone = selectedSection.getStartMilestone().getId() == milestoneId;
 		Section nextSection = getNextSection(sections, selectedSection);
 		applyDelay(delay, selectedSection, nextSection, isStartMilestone);
 		decreaseExpectedIncome(transportPlan, delay);
